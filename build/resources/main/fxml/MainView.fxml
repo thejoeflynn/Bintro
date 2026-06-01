@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.control.ToolBar?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.bintro.ui.MainController">
+
+    <top>
+        <ToolBar>
+            <items>
+                <Button text="New Project" onAction="#onNewProject"/>
+            </items>
+        </ToolBar>
+    </top>
+
+    <center>
+        <SplitPane dividerPositions="0.5">
+            <items>
+                <StackPane>
+                    <children>
+                        <Label text="Footage"/>
+                    </children>
+                </StackPane>
+                <StackPane>
+                    <children>
+                        <Label text="Script"/>
+                    </children>
+                </StackPane>
+            </items>
+        </SplitPane>
+    </center>
+
+    <bottom>
+        <HBox style="-fx-background-color: #eeeeee; -fx-border-color: #cccccc; -fx-border-width: 1 0 0 0;">
+            <padding>
+                <Insets top="4" right="8" bottom="4" left="8"/>
+            </padding>
+            <children>
+                <Label text="Ready"/>
+            </children>
+        </HBox>
+    </bottom>
+
+</BorderPane>

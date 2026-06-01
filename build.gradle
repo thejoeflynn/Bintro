@@ -1,0 +1,35 @@
+plugins {
+    id 'application'
+    id 'org.openjfx.javafxplugin' version '0.1.0'
+}
+
+group = 'com.bintro'
+version = '0.1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+javafx {
+    version = '21.0.5'
+    modules = ['javafx.controls', 'javafx.fxml']
+}
+
+dependencies {
+    implementation 'org.bytedeco:javacv-platform:1.5.10'
+    implementation 'org.apache.pdfbox:pdfbox:3.0.5'
+}
+
+application {
+    mainClass = 'com.bintro.App'
+}
+
+tasks.named('run') {
+    standardInput = System.in
+}
