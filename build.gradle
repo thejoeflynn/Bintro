@@ -24,6 +24,9 @@ javafx {
 dependencies {
     implementation 'org.bytedeco:javacv-platform:1.5.10'
     implementation 'org.apache.pdfbox:pdfbox:3.0.5'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.3'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 application {
@@ -32,4 +35,8 @@ application {
 
 tasks.named('run') {
     standardInput = System.in
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
 }
