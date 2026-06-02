@@ -18,7 +18,7 @@ java {
 
 javafx {
     version = '21.0.5'
-    modules = ['javafx.controls', 'javafx.fxml']
+    modules = ['javafx.controls', 'javafx.fxml', 'javafx.swing']
 }
 
 dependencies {
@@ -30,7 +30,8 @@ dependencies {
 }
 
 application {
-    mainClass = 'com.bintro.App'
+    // Override at the command line with -PmainClass=...
+    mainClass = findProperty('mainClass') ?: 'com.bintro.App'
 }
 
 tasks.named('run') {
