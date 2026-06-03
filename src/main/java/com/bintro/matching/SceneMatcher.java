@@ -36,8 +36,8 @@ public class SceneMatcher {
 
         String apiKey = Config.get("claude.api.key");
         if (apiKey == null || apiKey.isBlank() || "YOUR_CLAUDE_API_KEY_HERE".equals(apiKey)) {
-            System.err.println("SceneMatcher: claude.api.key is missing or unset — returning Unmatched");
-            return unmatched();
+            System.out.println("SceneMatcher: no API key — using local keyword matcher");
+            return new LocalSceneMatcher().match(transcript, scenes);
         }
 
         try {
