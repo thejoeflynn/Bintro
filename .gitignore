@@ -22,3 +22,11 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# Whisper binary and models (platform-specific, too large for git)
+whisper/whisper
+whisper/whisper.exe
+whisper/models/
+
+# Bintro config (contains API keys)
+config.properties
