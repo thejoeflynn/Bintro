@@ -3,6 +3,7 @@ package com.bintro.ui;
 import com.bintro.export.ClipMatch;
 import com.bintro.export.Exporter;
 import com.bintro.matching.MatchResult;
+import com.bintro.matching.MatchType;
 import com.bintro.matching.SceneMatcher;
 import com.bintro.media.Clip;
 import com.bintro.media.MediaScanner;
@@ -24,6 +25,7 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.cell.TextFieldTableCell;
+import javafx.scene.web.WebView;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.util.converter.IntegerStringConverter;
@@ -31,6 +33,8 @@ import javafx.util.converter.IntegerStringConverter;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Drives the Bintro UI in two distinct phases:
@@ -55,6 +59,7 @@ public class MainController {
     @FXML private TableView<ClipMatchViewModel> clipTable;
     @FXML private TableColumn<ClipMatchViewModel, String> clipCol;
     @FXML private TableColumn<ClipMatchViewModel, String> transcriptCol;
+    @FXML private TableColumn<ClipMatchViewModel, MatchType> typeCol;
     @FXML private TableColumn<ClipMatchViewModel, Integer> sceneNumberCol;
     @FXML private TableColumn<ClipMatchViewModel, String> sceneHeadingCol;
 
@@ -62,7 +67,7 @@ public class MainController {
     @FXML private Label statusLabel;
     @FXML private ProgressBar progressBar;
     @FXML private TextArea transcriptLog;
-    @FXML private TextArea scriptViewer;
+    @FXML private WebView scriptWebView;
 
     private File footageFolder;
     private File scriptFile;
@@ -76,6 +81,14 @@ public class MainController {
         statusLabel.setText("Ready");
         progressBar.setProgress(0);
         setupClipTable();
+
+        // Scroll the script viewer to the selected row's scene.
+        clipTable.getSelectionModel().selectedItemProperty().addListener((obs, oldVm, newVm) -> {
+            if (newVm == null || newVm.sceneNumber() <= 0) {
+                return;
+            }
+            scrollScriptTo(newVm.sceneNumber());
+        });
     }
 
     private void setupClipTable() {
@@ -94,11 +107,25 @@ public class MainController {
             }
         });
 
+        typeCol.setCellValueFactory(c -> c.getValue().matchTypeProperty());
+        typeCol.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(MatchType item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item == MatchType.VISUAL ? "Visual" : "Dialogue");
+                }
+            }
+        });
+
         sceneNumberCol.setCellValueFactory(c -> c.getValue().sceneNumberProperty().asObject());
         sceneNumberCol.setCellFactory(TextFieldTableCell.forTableColumn(new IntegerStringConverter()));
         sceneNumberCol.setOnEditCommit(ev -> {
             Integer v = ev.getNewValue();
             ev.getRowValue().sceneNumberProperty().set(v == null ? 0 : v);
+            renderScriptWithHighlights();
         });
 
         sceneHeadingCol.setCellValueFactory(c -> c.getValue().sceneHeadingProperty());
@@ -156,8 +183,9 @@ public class MainController {
             sceneList.setItems(FXCollections.observableArrayList(
                 scenes.stream().map(s -> s.sceneNumber() + ". " + s.heading()).toList()
             ));
-            scriptViewer.setText(buildScriptText(scenes));
-            scriptViewer.setScrollTop(0);
+            // Render the script with no highlights — clips haven't been matched yet.
+            scriptWebView.getEngine().loadContent(
+                ScriptRenderer.render(scenes, Map.of()), "text/html");
             // Rebuild table so new VMs reference the freshly loaded scenes for heading lookup.
             rebuildClipTableFromScan();
             statusLabel.setText("Loaded " + scenes.size() + " scene(s) from " + chosen.getName() + ".");
@@ -254,6 +282,7 @@ public class MainController {
             List<ClipMatchViewModel> result = task.getValue();
             clipTable.setItems(FXCollections.observableArrayList(result));
             exportButton.setDisable(result.isEmpty());
+            renderScriptWithHighlights();
         });
         task.setOnFailed(ev -> {
             runButton.setDisable(false);
@@ -334,15 +363,30 @@ public class MainController {
         });
     }
 
-    private static String buildScriptText(List<Scene> scenes) {
-        StringBuilder sb = new StringBuilder();
-        for (Scene s : scenes) {
-            sb.append("SCENE ").append(s.sceneNumber())
-              .append(" — ")
-              .append(s.heading()).append('\n');
-            String body = s.fullText() == null ? "" : s.fullText();
-            sb.append(body).append("\n\n");
+    /**
+     * Re-renders the script viewer with the current table's match data.
+     * Safe to call before a script is loaded — the empty scene list yields an
+     * empty HTML document. Skips VMs with no scene assigned.
+     */
+    private void renderScriptWithHighlights() {
+        if (scenes == null || scenes.isEmpty()) {
+            return;
         }
-        return sb.toString();
+        Map<Integer, List<ClipMatchViewModel>> byScene = clipTable.getItems().stream()
+            .filter(vm -> vm.sceneNumber() > 0)
+            .collect(Collectors.groupingBy(ClipMatchViewModel::sceneNumber));
+        scriptWebView.getEngine().loadContent(
+            ScriptRenderer.render(scenes, byScene), "text/html");
+    }
+
+    private void scrollScriptTo(int sceneNumber) {
+        // executeScript fails if the page hasn't finished loading; swallow.
+        try {
+            scriptWebView.getEngine().executeScript(
+                "var el = document.getElementById('scene-" + sceneNumber + "');"
+                    + " if (el) el.scrollIntoView({behavior:'smooth'});");
+        } catch (Exception ignored) {
+            // No script loaded yet — nothing to scroll.
+        }
     }
 }
