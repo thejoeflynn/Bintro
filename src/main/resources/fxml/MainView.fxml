@@ -8,6 +8,8 @@
 <?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TitledPane?>
 <?import javafx.scene.control.ToolBar?>
@@ -28,6 +30,7 @@
                 <Button fx:id="selectScriptButton" text="Select Script" onAction="#onSelectScript"/>
                 <Region HBox.hgrow="ALWAYS"/>
                 <Button fx:id="runButton" text="Run" onAction="#onRun" disable="true"/>
+                <Button fx:id="exportButton" text="Export" onAction="#onExport" disable="true"/>
             </items>
         </ToolBar>
     </top>
@@ -35,7 +38,7 @@
     <center>
         <VBox>
             <children>
-                <SplitPane dividerPositions="0.5" VBox.vgrow="ALWAYS">
+                <SplitPane dividerPositions="0.55" VBox.vgrow="ALWAYS">
                     <items>
                         <VBox spacing="4">
                             <padding>
@@ -43,7 +46,14 @@
                             </padding>
                             <children>
                                 <Label text="Footage" style="-fx-font-weight: bold;"/>
-                                <ListView fx:id="clipList" VBox.vgrow="ALWAYS"/>
+                                <TableView fx:id="clipTable" editable="true" VBox.vgrow="ALWAYS">
+                                    <columns>
+                                        <TableColumn fx:id="clipCol" text="Clip" prefWidth="180"/>
+                                        <TableColumn fx:id="transcriptCol" text="Transcript" prefWidth="260"/>
+                                        <TableColumn fx:id="sceneNumberCol" text="Scene #" prefWidth="80"/>
+                                        <TableColumn fx:id="sceneHeadingCol" text="Scene Heading" prefWidth="220"/>
+                                    </columns>
+                                </TableView>
                             </children>
                         </VBox>
                         <TabPane tabClosingPolicy="UNAVAILABLE">

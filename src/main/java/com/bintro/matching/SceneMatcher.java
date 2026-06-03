@@ -30,8 +30,13 @@ public class SceneMatcher {
         .build();
 
     public MatchResult match(Clip clip, String transcript, List<Scene> scenes) {
+        System.out.println("SceneMatcher: matching clip '" + clip.filename()
+            + "' against " + scenes.size() + " scenes, transcript length="
+            + (transcript == null ? 0 : transcript.length()) + " chars");
+
         String apiKey = Config.get("claude.api.key");
         if (apiKey == null || apiKey.isBlank() || "YOUR_CLAUDE_API_KEY_HERE".equals(apiKey)) {
+            System.err.println("SceneMatcher: claude.api.key is missing or unset — returning Unmatched");
             return unmatched();
         }
 
@@ -50,16 +55,21 @@ public class SceneMatcher {
 
             HttpResponse<String> resp = http.send(req, HttpResponse.BodyHandlers.ofString());
             if (resp.statusCode() / 100 != 2) {
-                System.err.println("SceneMatcher: HTTP " + resp.statusCode() + " — " + resp.body());
+                System.err.println("SceneMatcher: HTTP " + resp.statusCode()
+                    + " for clip '" + clip.filename() + "'");
+                System.err.println("SceneMatcher: response body: " + resp.body());
                 return unmatched();
             }
 
             int sceneNumber = extractSceneNumber(resp.body());
+            System.out.println("SceneMatcher: clip '" + clip.filename() + "' -> scene " + sceneNumber);
             return sceneNumber > 0
                 ? new MatchResult(sceneNumber, 1.0)
                 : unmatched();
         } catch (Exception e) {
-            System.err.println("SceneMatcher: " + e.getMessage());
+            System.err.println("SceneMatcher: exception while matching '" + clip.filename()
+                + "': " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            e.printStackTrace();
             return unmatched();
         }
     }
