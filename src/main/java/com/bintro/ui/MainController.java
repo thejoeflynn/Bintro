@@ -23,6 +23,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
+import javafx.scene.control.ListCell;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TableCell;
@@ -30,6 +31,7 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.cell.TextFieldTableCell;
+import javafx.scene.Node;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
@@ -83,6 +85,9 @@ public class MainController {
 
     @FXML private ListView<String> sceneList;
     @FXML private Label statusLabel;
+    @FXML private Label pathLabel;
+    @FXML private Label countBadge;
+    @FXML private Label footageCountLabel;
     @FXML private ProgressBar progressBar;
     @FXML private TextArea transcriptLog;
     @FXML private StackPane scriptStack;
@@ -113,6 +118,8 @@ public class MainController {
             menuBar.setUseSystemMenuBar(true);
         }
         setupClipTable();
+        setupSceneListStyle();
+        applyTableStyle();
 
         // Scroll the script viewer to the selected row's scene.
         clipTable.getSelectionModel().selectedItemProperty().addListener((obs, oldVm, newVm) -> {
@@ -233,6 +240,7 @@ public class MainController {
         exportButton.setDisable(true);
         updateRunEnabled();
         updateWindowTitle();
+        updateCountsAndPath();
     }
 
     @FXML
@@ -250,7 +258,7 @@ public class MainController {
             scenes = new ScriptParser().parse(chosen);
             scriptFile = chosen;
             sceneList.setItems(FXCollections.observableArrayList(
-                scenes.stream().map(s -> s.sceneNumber() + ". " + s.heading()).toList()
+                scenes.stream().map(s -> s.sceneNumber() + ". " + cleanHeading(s)).toList()
             ));
             // Pick the right viewer for the file format and prime it with no
             // highlights — clips haven't been matched yet.
@@ -275,6 +283,7 @@ public class MainController {
         exportButton.setDisable(true);
         updateRunEnabled();
         updateWindowTitle();
+        updateCountsAndPath();
     }
 
     /** Resets the clip table to placeholder VMs (no transcript, scene 0) using current state. */
@@ -593,6 +602,122 @@ public class MainController {
     }
 
     /**
+     * Updates the toolbar count badge, the footage-panel count, and the
+     * status-bar path label so they reflect whatever footage + script are
+     * currently loaded. Empty strings when nothing is loaded yet.
+     */
+    private void updateCountsAndPath() {
+        int clipsN = clips == null ? 0 : clips.size();
+        int scenesN = scenes == null ? 0 : scenes.size();
+        if (countBadge != null) {
+            countBadge.setText(clipsN == 0 && scenesN == 0
+                ? ""
+                : clipsN + " clips · " + scenesN + " scenes");
+        }
+        if (footageCountLabel != null) {
+            footageCountLabel.setText(clipsN == 0
+                ? ""
+                : clipsN + (clipsN == 1 ? " clip" : " clips"));
+        }
+        if (pathLabel != null) {
+            StringBuilder p = new StringBuilder();
+            if (footageFolder != null) {
+                p.append(footageFolder.getName());
+                if (scriptFile != null) {
+                    p.append(" / ").append(scriptFile.getName());
+                }
+            }
+            pathLabel.setText(p.toString());
+        }
+    }
+
+    /**
+     * Styled scene-list rows: small text, alternating background, dark
+     * selected state. Applied via cell factory because the constraint is to
+     * avoid relying on theme.css.
+     */
+    private void setupSceneListStyle() {
+        if (sceneList == null) {
+            return;
+        }
+        sceneList.setCellFactory(lv -> new ListCell<>() {
+            {
+                // Re-style whenever selection state flips so the dark
+                // selection background follows row changes.
+                selectedProperty().addListener((obs, oldV, newV) -> restyle());
+            }
+
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item);
+                restyle();
+            }
+
+            private void restyle() {
+                if (isEmpty()) {
+                    setStyle("");
+                    return;
+                }
+                boolean odd = getIndex() % 2 == 1;
+                boolean selected = isSelected();
+                String bg = selected ? "#111111" : (odd ? "#fafafa" : "#ffffff");
+                String fg = selected ? "#ffffff" : "#333333";
+                setStyle(
+                    "-fx-background-color: " + bg + ";"
+                        + "-fx-text-fill: " + fg + ";"
+                        + "-fx-font-size: 10px;"
+                        + "-fx-padding: 5 12 5 12;"
+                );
+            }
+        });
+    }
+
+    /**
+     * Strips JavaFX's default table chrome and lightens the column-header
+     * strip. The column-header lookup needs layout to have run, so it's
+     * deferred onto the FX cycle (with a second-cycle retry if the lookup
+     * isn't ready yet).
+     */
+    private void applyTableStyle() {
+        if (clipTable == null) {
+            return;
+        }
+        clipTable.setStyle(
+            "-fx-background-color: transparent;"
+                + "-fx-border-color: transparent;"
+        );
+        Platform.runLater(this::styleColumnHeaders);
+    }
+
+    private void styleColumnHeaders() {
+        if (clipTable == null) {
+            return;
+        }
+        Node header = clipTable.lookup(".column-header-background");
+        if (header == null) {
+            // Layout isn't ready yet; try once more next tick and give up
+            // silently if it's still not there.
+            Platform.runLater(() -> {
+                Node h = clipTable.lookup(".column-header-background");
+                if (h != null) {
+                    h.setStyle(
+                        "-fx-background-color: #fafafa;"
+                            + "-fx-border-color: #eeeeee;"
+                            + "-fx-border-width: 0 0 1 0;"
+                    );
+                }
+            });
+            return;
+        }
+        header.setStyle(
+            "-fx-background-color: #fafafa;"
+                + "-fx-border-color: #eeeeee;"
+                + "-fx-border-width: 0 0 1 0;"
+        );
+    }
+
+    /**
      * Opens a fresh main window. Each menu invocation gets its own independent
      * project state — the existing window stays open.
      */
@@ -671,5 +796,26 @@ public class MainController {
         } catch (Exception ignored) {
             // No script loaded yet — nothing to scroll.
         }
+    }
+
+    /**
+     * Some PDF parsers glue the scene number to the heading text (e.g.
+     * {@code "EXT. STREET - DAY 1"} for scene 1, or worse {@code "DAY1 1"}
+     * when whitespace collapses). Strips trailing instances of the actual
+     * scene number — and only the scene number — so legitimate trailing
+     * digits ({@code "INT. ROOM 247"}) survive.
+     */
+    private static String cleanHeading(Scene s) {
+        if (s == null || s.heading() == null) {
+            return "";
+        }
+        String h = s.heading();
+        String pattern = "\\s*" + java.util.regex.Pattern.quote(String.valueOf(s.sceneNumber())) + "\\s*$";
+        String previous;
+        do {
+            previous = h;
+            h = h.replaceAll(pattern, "");
+        } while (!h.equals(previous));
+        return h.strip();
     }
 }

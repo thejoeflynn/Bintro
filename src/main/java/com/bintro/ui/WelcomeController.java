@@ -5,7 +5,6 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.stage.FileChooser;
@@ -13,10 +12,11 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 
 /**
- * Drives the launch-screen window: branded logo (or text fallback) plus the
+ * Drives the launch-screen window: dark background, branded logo, and the
  * New Project / Open Project entry points. New Project opens the full
  * MainView in a new {@code Stage} and closes the welcome window.
  */
@@ -27,29 +27,23 @@ public class WelcomeController {
     private static final String THEME_CSS = "/css/theme.css";
 
     @FXML private ImageView logoImage;
-    @FXML private Label logoFallback;
     @FXML private Button newProjectButton;
     @FXML private Button openProjectButton;
 
     @FXML
     private void initialize() {
-        // Defensive logo loading — the asset is intended to be provided by
-        // the user, but the welcome screen still has to render if it isn't
-        // present yet.
-        URL logoUrl = getClass().getResource(LOGO_RESOURCE);
-        if (logoUrl != null) {
-            try {
-                logoImage.setImage(new Image(logoUrl.toExternalForm()));
-                logoFallback.setVisible(false);
-                logoFallback.setManaged(false);
+        // Stream-based loading is more reliable than URL-based when the
+        // resource lives inside a packaged JAR.
+        try (InputStream in = getClass().getResourceAsStream(LOGO_RESOURCE)) {
+            if (in == null) {
+                System.err.println("WelcomeController: logo resource not found at "
+                    + LOGO_RESOURCE);
                 return;
-            } catch (Exception e) {
-                System.err.println("WelcomeController: failed to load logo: " + e);
             }
+            logoImage.setImage(new Image(in));
+        } catch (Exception e) {
+            System.err.println("WelcomeController: failed to load logo: " + e);
         }
-        // Fall through: show the text fallback, hide the image slot.
-        logoImage.setVisible(false);
-        logoImage.setManaged(false);
     }
 
     @FXML

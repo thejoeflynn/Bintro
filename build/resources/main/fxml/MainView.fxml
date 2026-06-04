@@ -18,10 +18,8 @@
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TitledPane?>
 <?import javafx.scene.control.ToggleGroup?>
-<?import javafx.scene.control.ToolBar?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.Priority?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
@@ -75,20 +73,24 @@
                     </Menu>
                 </menus>
             </MenuBar>
-            <ToolBar>
-                <items>
-                    <Button fx:id="selectFootageButton" text="Select Footage"
-                            onAction="#onSelectFootage" styleClass="toolbar-button"/>
-                    <Button fx:id="selectScriptButton" text="Select Script"
-                            onAction="#onSelectScript" styleClass="toolbar-button"/>
-                    <Region HBox.hgrow="ALWAYS"/>
-                    <Button fx:id="runButton" text="Run"
-                            onAction="#onRun" disable="true" styleClass="toolbar-button"/>
-                    <Button fx:id="exportButton" text="Export"
-                            onAction="#onExport" disable="true"
-                            styleClass="toolbar-button,secondary"/>
-                </items>
-            </ToolBar>
+            <HBox alignment="CENTER_LEFT"
+                  style="-fx-background-color: #ffffff; -fx-border-color: #dddddd; -fx-border-width: 0 0 1 0; -fx-padding: 7 12 7 12; -fx-spacing: 8;">
+                <Button fx:id="selectFootageButton" text="Select Footage"
+                        onAction="#onSelectFootage"
+                        style="-fx-background-color: #111111; -fx-text-fill: #ffffff; -fx-font-size: 11px; -fx-padding: 5 14 5 14; -fx-background-radius: 4; -fx-border-color: transparent; -fx-cursor: hand;"/>
+                <Button fx:id="selectScriptButton" text="Select Script"
+                        onAction="#onSelectScript"
+                        style="-fx-background-color: #111111; -fx-text-fill: #ffffff; -fx-font-size: 11px; -fx-padding: 5 14 5 14; -fx-background-radius: 4; -fx-border-color: transparent; -fx-cursor: hand;"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="countBadge" text=""
+                       style="-fx-font-size: 10px; -fx-text-fill: #888888; -fx-background-color: #f0efe9; -fx-padding: 4 10 4 10; -fx-background-radius: 3; -fx-border-color: #dddddd; -fx-border-width: 1; -fx-border-radius: 3;"/>
+                <Button fx:id="runButton" text="Run"
+                        onAction="#onRun" disable="true"
+                        style="-fx-background-color: #111111; -fx-text-fill: #ffffff; -fx-font-size: 11px; -fx-padding: 5 14 5 14; -fx-background-radius: 4; -fx-border-color: transparent; -fx-cursor: hand;"/>
+                <Button fx:id="exportButton" text="Export"
+                        onAction="#onExport" disable="true"
+                        style="-fx-background-color: transparent; -fx-text-fill: #aaaaaa; -fx-font-size: 11px; -fx-padding: 5 14 5 14; -fx-background-radius: 4; -fx-border-color: #cccccc; -fx-border-width: 1; -fx-border-radius: 4;"/>
+            </HBox>
         </VBox>
     </top>
 
@@ -97,12 +99,16 @@
             <children>
                 <SplitPane dividerPositions="0.55" VBox.vgrow="ALWAYS">
                     <items>
-                        <VBox spacing="4">
-                            <padding>
-                                <Insets top="8" right="8" bottom="8" left="8"/>
-                            </padding>
+                        <VBox spacing="0">
                             <children>
-                                <Label text="Footage" style="-fx-font-weight: bold;"/>
+                                <HBox alignment="CENTER_LEFT"
+                                      style="-fx-background-color: #ffffff; -fx-border-color: #eeeeee; -fx-border-width: 0 0 1 0; -fx-padding: 8 12 8 12;">
+                                    <Label text="FOOTAGE"
+                                           style="-fx-font-size: 10px; -fx-text-fill: #333333; -fx-font-weight: bold;"/>
+                                    <Region HBox.hgrow="ALWAYS"/>
+                                    <Label fx:id="footageCountLabel" text=""
+                                           style="-fx-font-size: 10px; -fx-text-fill: #aaaaaa;"/>
+                                </HBox>
                                 <TableView fx:id="clipTable" editable="true" VBox.vgrow="ALWAYS">
                                     <columns>
                                         <TableColumn fx:id="clipCol" text="Clip" prefWidth="180"/>
@@ -142,9 +148,12 @@
     </center>
 
     <bottom>
-        <HBox spacing="12" alignment="CENTER_LEFT" styleClass="status-bar">
+        <HBox spacing="12" alignment="CENTER_LEFT"
+              style="-fx-background-color: #f5f4f0; -fx-border-color: #dddddd; -fx-border-width: 1 0 0 0; -fx-padding: 5 12 5 12;">
             <children>
                 <Label fx:id="statusLabel" text="Ready" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                <Label fx:id="pathLabel" text=""
+                       style="-fx-text-fill: #bbbbbb; -fx-font-size: 10px;"/>
                 <ProgressBar fx:id="progressBar" progress="0.0" prefWidth="200"/>
             </children>
         </HBox>
