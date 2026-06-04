@@ -29,10 +29,21 @@ public class ScriptParser {
         Pattern.CASE_INSENSITIVE
     );
 
-    /** Heuristic CHARACTER cue: ALL CAPS, 2–40 chars, no lowercase letters. */
-    private static final Pattern CHARACTER_CUE = Pattern.compile(
-        "^[^a-z]{2,40}$"
-    );
+    /** Prefixes that look like ALL CAPS character cues but are actually action
+     *  callouts, titles, or in-line scene-time markers. */
+    private static final String[] NON_CHARACTER_PREFIXES = {
+        "TITLE:", "SUPER:", "TITLE CARD:", "SMASH CUT", "MATCH CUT",
+        "TIME CUT", "INTERCUT", "BACK TO:", "LATER", "CONTINUOUS",
+        "SAME TIME", "MOMENTS LATER"
+    };
+
+    /** Max chars on the line *following* a CHARACTER cue for it to still
+     *  look like dialogue rather than a full-width action paragraph. */
+    private static final int DIALOGUE_LINE_MAX = 60;
+
+    /** Forward-window size for confirming a CHARACTER must be followed by
+     *  DIALOGUE/PARENTHETICAL relatively soon. */
+    private static final int CHARACTER_LOOKAHEAD = 3;
 
     /**
      * Parses any supported screenplay format, dispatching by file extension.
@@ -61,63 +72,177 @@ public class ScriptParser {
         List<Scene> scenes = new ArrayList<>();
         String currentHeading = null;
         StringBuilder currentBody = new StringBuilder();
-        List<ScriptElement> currentElements = new ArrayList<>();
-        ElementType previousType = null;
+        // Buffer stripped non-empty body lines so we can do multi-pass
+        // classification with lookahead/lookbehind once the scene is complete.
+        List<String> sceneBodyLines = new ArrayList<>();
         int nextSceneNumber = 1;
 
         for (String line : rawText.split("\\r?\\n", -1)) {
             if (SLUGLINE.matcher(line).matches()) {
                 if (currentHeading != null) {
-                    scenes.add(new Scene(nextSceneNumber++, currentHeading,
-                        currentBody.toString().strip(), List.copyOf(currentElements)));
+                    scenes.add(buildScene(nextSceneNumber++, currentHeading,
+                        currentBody.toString(), sceneBodyLines));
                     currentBody.setLength(0);
-                    currentElements = new ArrayList<>();
+                    sceneBodyLines = new ArrayList<>();
                 }
                 currentHeading = line.strip();
-                currentElements.add(new ScriptElement(ElementType.SCENE_HEADING, currentHeading));
-                previousType = ElementType.SCENE_HEADING;
             } else if (currentHeading != null) {
                 // Preserve existing fullText behaviour: append every non-slugline
                 // line (including blank lines) so existing matchers and tests
                 // see byte-identical content.
                 currentBody.append(line).append('\n');
-
                 String stripped = line.strip();
-                if (stripped.isEmpty()) {
-                    continue;
+                if (!stripped.isEmpty()) {
+                    sceneBodyLines.add(stripped);
                 }
-                ElementType type = classifyTextLine(stripped, previousType);
-                currentElements.add(new ScriptElement(type, stripped));
-                previousType = type;
             }
         }
 
         if (currentHeading != null) {
-            scenes.add(new Scene(nextSceneNumber, currentHeading,
-                currentBody.toString().strip(), List.copyOf(currentElements)));
+            scenes.add(buildScene(nextSceneNumber, currentHeading,
+                currentBody.toString(), sceneBodyLines));
         }
 
         return scenes;
     }
 
     /**
-     * Heuristic line classification for the PDF path (FDX paragraphs carry
-     * explicit types). Order matters — earlier rules take precedence.
+     * Builds a {@link Scene} with multi-pass classification of body lines.
+     * Pass order:
+     * <ol>
+     *   <li>Tentative typing: PARENTHETICAL, tentative CHARACTER (syntactic
+     *       checks only), or {@code null} = pending.</li>
+     *   <li>Verify each tentative CHARACTER against neighbouring lines
+     *       (must-have-dialogue-next, must-not-follow-character).</li>
+     *   <li>Fill pending lines: previous-was-CHARACTER/PARENTHETICAL → DIALOGUE,
+     *       else → ACTION.</li>
+     *   <li>Post-filter: a CHARACTER without DIALOGUE/PARENTHETICAL within the
+     *       next {@code CHARACTER_LOOKAHEAD} elements is demoted to ACTION.</li>
+     *   <li>Repair orphaned DIALOGUE lines whose preceding CHARACTER got
+     *       demoted.</li>
+     * </ol>
      */
-    private static ElementType classifyTextLine(String stripped, ElementType previous) {
+    private static Scene buildScene(int number, String heading, String fullText,
+                                    List<String> bodyLines) {
+        int n = bodyLines.size();
+        ElementType[] types = new ElementType[n];
+
+        // Pass 1 — tentative syntactic typing.
+        for (int i = 0; i < n; i++) {
+            String s = bodyLines.get(i);
+            if (s.startsWith("(") && s.endsWith(")")) {
+                types[i] = ElementType.PARENTHETICAL;
+            } else if (looksLikeCharacterCue(s)) {
+                types[i] = ElementType.CHARACTER;
+            } else {
+                types[i] = null;
+            }
+        }
+
+        // Pass 2 — verify tentative CHARACTERs against neighbours.
+        for (int i = 0; i < n; i++) {
+            if (types[i] != ElementType.CHARACTER) {
+                continue;
+            }
+            String next = i + 1 < n ? bodyLines.get(i + 1) : null;
+            // Next line must exist AND be a parenthetical OR short enough to
+            // plausibly be dialogue rather than an action paragraph.
+            boolean nextOk = next != null
+                && (isParenthetical(next) || next.length() < DIALOGUE_LINE_MAX);
+            // Previous element must not be another CHARACTER candidate —
+            // two stacked CHARACTERs is almost always a misclassification.
+            boolean prevOk = i == 0 || types[i - 1] != ElementType.CHARACTER;
+            if (!nextOk || !prevOk) {
+                types[i] = null;
+            }
+        }
+
+        // Pass 3 — fill pending lines based on the now-stable previous type.
+        for (int i = 0; i < n; i++) {
+            if (types[i] != null) {
+                continue;
+            }
+            ElementType prev = i > 0 ? types[i - 1] : null;
+            types[i] = (prev == ElementType.CHARACTER || prev == ElementType.PARENTHETICAL)
+                ? ElementType.DIALOGUE
+                : ElementType.ACTION;
+        }
+
+        // Pass 4 — CHARACTER must be followed by DIALOGUE/PARENTHETICAL within
+        // CHARACTER_LOOKAHEAD elements, else demote.
+        for (int i = 0; i < n; i++) {
+            if (types[i] != ElementType.CHARACTER) {
+                continue;
+            }
+            int limit = Math.min(n, i + 1 + CHARACTER_LOOKAHEAD);
+            boolean found = false;
+            for (int j = i + 1; j < limit; j++) {
+                if (types[j] == ElementType.DIALOGUE || types[j] == ElementType.PARENTHETICAL) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                types[i] = ElementType.ACTION;
+            }
+        }
+
+        // Pass 5 — repair orphaned DIALOGUE whose preceding CHARACTER was
+        // demoted in pass 4.
+        for (int i = 0; i < n; i++) {
+            if (types[i] != ElementType.DIALOGUE) {
+                continue;
+            }
+            ElementType prev = i > 0 ? types[i - 1] : null;
+            if (prev != ElementType.CHARACTER && prev != ElementType.PARENTHETICAL) {
+                types[i] = ElementType.ACTION;
+            }
+        }
+
+        List<ScriptElement> elements = new ArrayList<>(n + 1);
+        elements.add(new ScriptElement(ElementType.SCENE_HEADING, heading));
+        for (int i = 0; i < n; i++) {
+            elements.add(new ScriptElement(types[i], bodyLines.get(i)));
+        }
+        return new Scene(number, heading, fullText.strip(), List.copyOf(elements));
+    }
+
+    /**
+     * Pure syntactic checks for a CHARACTER cue (conditions 1–5 from the spec).
+     * Higher-level structural checks (lookahead, lookbehind, demotion) happen
+     * in the multi-pass {@link #buildScene} flow.
+     */
+    private static boolean looksLikeCharacterCue(String stripped) {
+        int len = stripped.length();
+        if (len < 2 || len > 40) {
+            return false;
+        }
         if (SLUGLINE.matcher(stripped).matches()) {
-            return ElementType.SCENE_HEADING;
+            return false;
         }
-        if (stripped.startsWith("(") && stripped.endsWith(")")) {
-            return ElementType.PARENTHETICAL;
+        if (!hasLetter(stripped)) {
+            return false;
         }
-        if (CHARACTER_CUE.matcher(stripped).matches() && hasLetter(stripped)) {
-            return ElementType.CHARACTER;
+        // No lowercase letters at all.
+        for (int i = 0; i < len; i++) {
+            if (Character.isLowerCase(stripped.charAt(i))) {
+                return false;
+            }
         }
-        if (previous == ElementType.CHARACTER || previous == ElementType.PARENTHETICAL) {
-            return ElementType.DIALOGUE;
+        // Transitions like "CUT TO:" / "FADE TO:".
+        if (stripped.endsWith("TO:")) {
+            return false;
         }
-        return ElementType.ACTION;
+        for (String prefix : NON_CHARACTER_PREFIXES) {
+            if (stripped.startsWith(prefix)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean isParenthetical(String stripped) {
+        return stripped.startsWith("(") && stripped.endsWith(")");
     }
 
     private static boolean hasLetter(String s) {

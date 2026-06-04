@@ -31,6 +31,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.StackPane;
 import javafx.scene.web.WebView;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
@@ -83,7 +84,13 @@ public class MainController {
     @FXML private Label statusLabel;
     @FXML private ProgressBar progressBar;
     @FXML private TextArea transcriptLog;
+    @FXML private StackPane scriptStack;
     @FXML private WebView scriptWebView;
+
+    /** Created lazily when the user first opens a PDF script. */
+    private PdfPageViewer pdfPageViewer;
+    /** True while a PDF script is loaded — drives which viewer the controller talks to. */
+    private boolean isPdfScript = false;
 
     private File footageFolder;
     private File scriptFile;
@@ -223,9 +230,18 @@ public class MainController {
             sceneList.setItems(FXCollections.observableArrayList(
                 scenes.stream().map(s -> s.sceneNumber() + ". " + s.heading()).toList()
             ));
-            // Render the script with no highlights — clips haven't been matched yet.
-            scriptWebView.getEngine().loadContent(
-                ScriptRenderer.render(scenes, Map.of()), "text/html");
+            // Pick the right viewer for the file format and prime it with no
+            // highlights — clips haven't been matched yet.
+            boolean pdf = chosen.getName().toLowerCase().endsWith(".pdf");
+            isPdfScript = pdf;
+            if (pdf) {
+                showPdfViewer();
+                loadPdfInBackground(chosen);
+            } else {
+                showWebView();
+                scriptWebView.getEngine().loadContent(
+                    ScriptRenderer.render(scenes, Map.of()), "text/html");
+            }
             // Rebuild table so new VMs reference the freshly loaded scenes for heading lookup.
             rebuildClipTableFromScan();
             statusLabel.setText("Loaded " + scenes.size() + " scene(s) from " + chosen.getName() + ".");
@@ -417,8 +433,79 @@ public class MainController {
         Map<Integer, List<ClipMatchViewModel>> byScene = clipTable.getItems().stream()
             .filter(vm -> vm.sceneNumber() > 0)
             .collect(Collectors.groupingBy(ClipMatchViewModel::sceneNumber));
-        scriptWebView.getEngine().loadContent(
-            ScriptRenderer.render(scenes, byScene), "text/html");
+        if (isPdfScript && pdfPageViewer != null) {
+            pdfPageViewer.updateGutterBars(scenes, byScene);
+        } else {
+            scriptWebView.getEngine().loadContent(
+                ScriptRenderer.render(scenes, byScene), "text/html");
+        }
+    }
+
+    /**
+     * Lazily creates the PDF viewer (and wires its click-to-select callback)
+     * the first time a PDF script is loaded, then makes it the active viewer
+     * inside the script-tab StackPane.
+     */
+    private void showPdfViewer() {
+        if (pdfPageViewer == null) {
+            pdfPageViewer = new PdfPageViewer();
+            pdfPageViewer.setOnClipSelected(filename -> {
+                if (filename == null) {
+                    return;
+                }
+                for (ClipMatchViewModel vm : clipTable.getItems()) {
+                    if (filename.equals(vm.getFilename())) {
+                        clipTable.getSelectionModel().select(vm);
+                        clipTable.scrollTo(vm);
+                        return;
+                    }
+                }
+            });
+            scriptStack.getChildren().add(pdfPageViewer);
+        }
+        pdfPageViewer.setVisible(true);
+        pdfPageViewer.setManaged(true);
+        scriptWebView.setVisible(false);
+        scriptWebView.setManaged(false);
+    }
+
+    private void showWebView() {
+        if (pdfPageViewer != null) {
+            pdfPageViewer.setVisible(false);
+            pdfPageViewer.setManaged(false);
+        }
+        scriptWebView.setVisible(true);
+        scriptWebView.setManaged(true);
+    }
+
+    /**
+     * Renders the PDF on a background thread to avoid stalling the UI on long
+     * scripts. The viewer marshals scene-graph mutations back to the FX thread
+     * itself, so this Task only needs to call {@code loadPdf} and report status.
+     */
+    private void loadPdfInBackground(File pdfFile) {
+        statusLabel.setText("Rendering PDF…");
+        Task<Void> task = new Task<>() {
+            @Override
+            protected Void call() throws Exception {
+                pdfPageViewer.loadPdf(pdfFile, 1.5f);
+                return null;
+            }
+        };
+        task.setOnSucceeded(ev ->
+            statusLabel.setText("Loaded " + scenes.size() + " scene(s) from "
+                + pdfFile.getName() + "."));
+        task.setOnFailed(ev -> {
+            Throwable t = task.getException();
+            statusLabel.setText("Failed to render PDF: "
+                + (t != null ? t.getMessage() : "unknown error"));
+            if (t != null) {
+                t.printStackTrace();
+            }
+        });
+        Thread worker = new Thread(task, "bintro-pdf-render");
+        worker.setDaemon(true);
+        worker.start();
     }
 
     /**
@@ -510,6 +597,10 @@ public class MainController {
     }
 
     private void scrollScriptTo(int sceneNumber) {
+        if (isPdfScript && pdfPageViewer != null) {
+            pdfPageViewer.scrollToScene(sceneNumber);
+            return;
+        }
         // executeScript fails if the page hasn't finished loading; swallow.
         try {
             scriptWebView.getEngine().executeScript(
