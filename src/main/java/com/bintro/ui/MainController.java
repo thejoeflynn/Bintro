@@ -8,6 +8,7 @@ import com.bintro.matching.SceneMatcher;
 import com.bintro.media.Clip;
 import com.bintro.media.MediaScanner;
 import com.bintro.parser.Scene;
+import com.bintro.parser.ScenePositionIndex;
 import com.bintro.parser.ScriptParser;
 import com.bintro.transcription.Transcriber;
 
@@ -135,6 +136,27 @@ public class MainController {
                 }
             }
         });
+
+        // When the stage appears, register a close-request hook so we can
+        // tear down the lazy-render pool / open PDDocument cleanly.
+        clipTable.sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (newScene == null) {
+                return;
+            }
+            newScene.windowProperty().addListener((wObs, oldWin, newWin) -> {
+                if (newWin instanceof Stage stage) {
+                    stage.addEventHandler(javafx.stage.WindowEvent.WINDOW_CLOSE_REQUEST,
+                        ev -> disposePdfViewer());
+                }
+            });
+        });
+    }
+
+    /** Releases the lazy-renderer's threads and the open PDDocument, if any. */
+    private void disposePdfViewer() {
+        if (pdfPageViewer != null) {
+            pdfPageViewer.dispose();
+        }
     }
 
     private void setupClipTable() {
@@ -237,6 +259,7 @@ public class MainController {
             if (pdf) {
                 showPdfViewer();
                 loadPdfInBackground(chosen);
+                buildPositionIndexInBackground(chosen);
             } else {
                 showWebView();
                 scriptWebView.getEngine().loadContent(
@@ -488,7 +511,7 @@ public class MainController {
         Task<Void> task = new Task<>() {
             @Override
             protected Void call() throws Exception {
-                pdfPageViewer.loadPdf(pdfFile, 1.5f);
+                pdfPageViewer.loadPdf(pdfFile);
                 return null;
             }
         };
@@ -504,6 +527,45 @@ public class MainController {
             }
         });
         Thread worker = new Thread(task, "bintro-pdf-render");
+        worker.setDaemon(true);
+        worker.start();
+    }
+
+    /**
+     * Indexes scene + dialogue positions on a background thread so the gutter
+     * bars can use pixel-accurate placement when ready. If indexing fails the
+     * viewer just keeps the heuristic placement — the app stays functional.
+     */
+    private void buildPositionIndexInBackground(File pdfFile) {
+        final List<Scene> scenesSnapshot = List.copyOf(scenes);
+        Task<ScenePositionIndex> indexTask = new Task<>() {
+            @Override
+            protected ScenePositionIndex call() throws Exception {
+                return ScenePositionIndex.build(pdfFile, scenesSnapshot);
+            }
+        };
+        indexTask.setOnSucceeded(ev -> {
+            if (pdfPageViewer != null) {
+                pdfPageViewer.setPositionIndex(indexTask.getValue());
+                // If the user already ran Phase 1 before indexing finished,
+                // re-draw bars now using the fresh positions.
+                if (!clipTable.getItems().isEmpty()) {
+                    refreshScriptView();
+                }
+                statusLabel.setText("Script indexed.");
+            }
+        });
+        indexTask.setOnFailed(ev -> {
+            Throwable t = indexTask.getException();
+            System.err.println("MainController: position indexing failed: "
+                + (t != null ? t.getMessage() : "unknown error"));
+            if (t != null) {
+                t.printStackTrace();
+            }
+            // Intentionally don't surface this to the user — heuristic
+            // gutter placement still works.
+        });
+        Thread worker = new Thread(indexTask, "pdf-indexer");
         worker.setDaemon(true);
         worker.start();
     }
