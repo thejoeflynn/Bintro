@@ -71,6 +71,11 @@ public class ClipMatchViewModel {
         return clip;
     }
 
+    /** JavaBean-style getter so JS-bridge reflection lookups can find the filename. */
+    public String getFilename() {
+        return filename.get();
+    }
+
     public int sceneNumber() {
         return sceneNumber.get();
     }

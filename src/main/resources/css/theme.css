@@ -1,0 +1,104 @@
+/* ─────────────────────────────────────────────────────────────
+ * Bintro theme — Light (default)
+ *
+ * All colors live in `-bintro-*` and `-clip-*` custom properties so the
+ * theme can be swapped by replacing this file. UI code and FXML should
+ * never reference raw hex.
+ * ─────────────────────────────────────────────────────────────
+ */
+
+/* FragmentCore — loaded if the .ttf is present at runtime. If the file
+ * is missing JavaFX silently ignores this block and CSS falls back to
+ * the next-named font in the chain. App.java also tries Font.loadFont()
+ * defensively so headings still render with something sensible. */
+@font-face {
+    src: url('/fonts/FragmentCore.ttf');
+    -fx-font-family: 'FragmentCore';
+}
+
+/* ── Light theme (default) ─────────────────────────────────── */
+.root {
+    -bintro-bg:           #f5f4f0;
+    -bintro-bg-raised:    #ffffff;
+    -bintro-bg-sunken:    #e8e7e3;
+    -bintro-border:       #d0cfc9;
+    -bintro-text:         #1a1a1a;
+    -bintro-text-muted:   #6b6b6b;
+    -bintro-accent:       #1a1a1a;
+    -bintro-accent-text:  #ffffff;
+
+    /* Gutter bar palette — canonical for any JavaFX-side gutter UI.
+     * ScriptRenderer's embedded WebView CSS mirrors these hex values. */
+    -clip-0: #4a90d9;
+    -clip-1: #e07b54;
+    -clip-2: #5aaa6a;
+    -clip-3: #b07dd4;
+    -clip-4: #c8a830;
+    -clip-5: #4abcbc;
+
+    -fx-background-color: -bintro-bg;
+    -fx-font-family: 'Courier New';
+    -fx-font-size: 13px;
+}
+
+/* ── Dark theme (future) ───────────────────────────────────── */
+/* .root.theme-dark { ... } */
+
+/* ── Shared component styles ───────────────────────────────── */
+.bintro-heading {
+    -fx-font-family: 'FragmentCore', 'Helvetica Neue', sans-serif;
+    -fx-text-fill: -bintro-text;
+}
+
+.bintro-heading-large {
+    -fx-font-family: 'FragmentCore', 'Helvetica Neue', sans-serif;
+    -fx-text-fill: -bintro-text;
+    -fx-font-size: 48px;
+    -fx-letter-spacing: 0.1em;
+}
+
+.version-label {
+    -fx-text-fill: -bintro-text-muted;
+    -fx-font-family: 'FragmentCore', 'Helvetica Neue', sans-serif;
+    -fx-font-size: 11px;
+}
+
+.toolbar-button {
+    -fx-background-color: -bintro-accent;
+    -fx-text-fill: -bintro-accent-text;
+    -fx-font-size: 12px;
+    -fx-padding: 6 14 6 14;
+    -fx-background-radius: 3;
+    -fx-cursor: hand;
+    -fx-border-color: transparent;
+}
+.toolbar-button:hover {
+    -fx-opacity: 0.85;
+}
+.toolbar-button:disabled {
+    -fx-opacity: 0.4;
+    -fx-cursor: default;
+}
+
+.toolbar-button.secondary {
+    -fx-background-color: transparent;
+    -fx-text-fill: -bintro-text;
+    -fx-border-color: -bintro-border;
+    -fx-border-radius: 3;
+    -fx-border-width: 1;
+}
+.toolbar-button.secondary:hover {
+    -fx-background-color: -bintro-bg-sunken;
+    -fx-opacity: 1.0;
+}
+
+.status-bar {
+    -fx-background-color: -bintro-bg-sunken;
+    -fx-border-color: -bintro-border;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 4 8 4 8;
+}
+
+.welcome-root {
+    -fx-background-color: -bintro-bg;
+}

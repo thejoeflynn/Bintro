@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<StackPane xmlns="http://javafx.com/javafx/21"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.bintro.ui.WelcomeController"
+           styleClass="welcome-root">
+
+    <VBox alignment="CENTER" spacing="32">
+        <padding>
+            <Insets top="40" right="40" bottom="40" left="40"/>
+        </padding>
+
+        <!-- Logo slot. Controller toggles between the image and the text
+             fallback at initialise time based on whether /images/bintro-logo.png
+             is on the classpath. -->
+        <StackPane>
+            <ImageView fx:id="logoImage" fitWidth="320" preserveRatio="true"/>
+            <Label fx:id="logoFallback" text="BINTRO" styleClass="bintro-heading-large"/>
+        </StackPane>
+
+        <HBox alignment="CENTER" spacing="16">
+            <Button fx:id="newProjectButton" text="New Project"
+                    onAction="#onNewProject" styleClass="toolbar-button"/>
+            <Button fx:id="openProjectButton" text="Open Project"
+                    onAction="#onOpenProject"
+                    styleClass="toolbar-button,secondary"/>
+        </HBox>
+
+        <Label text="0.1.0 — Early Preview" styleClass="version-label"/>
+    </VBox>
+
+</StackPane>

@@ -1,5 +1,6 @@
 package com.bintro.parser;
 
+import com.bintro.parser.ScriptElement.ElementType;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
@@ -26,6 +27,11 @@ public class ScriptParser {
         "^\\s*(?:\\d+[A-Za-z]?\\s+)?" +
         "(?:INT\\.?/EXT\\.?|EXT\\.?/INT\\.?|I/E\\.?|INT\\.?|EXT\\.?)\\s+\\S.*$",
         Pattern.CASE_INSENSITIVE
+    );
+
+    /** Heuristic CHARACTER cue: ALL CAPS, 2–40 chars, no lowercase letters. */
+    private static final Pattern CHARACTER_CUE = Pattern.compile(
+        "^[^a-z]{2,40}$"
     );
 
     /**
@@ -55,25 +61,72 @@ public class ScriptParser {
         List<Scene> scenes = new ArrayList<>();
         String currentHeading = null;
         StringBuilder currentBody = new StringBuilder();
+        List<ScriptElement> currentElements = new ArrayList<>();
+        ElementType previousType = null;
         int nextSceneNumber = 1;
 
         for (String line : rawText.split("\\r?\\n", -1)) {
             if (SLUGLINE.matcher(line).matches()) {
                 if (currentHeading != null) {
-                    scenes.add(new Scene(nextSceneNumber++, currentHeading, currentBody.toString().strip()));
+                    scenes.add(new Scene(nextSceneNumber++, currentHeading,
+                        currentBody.toString().strip(), List.copyOf(currentElements)));
                     currentBody.setLength(0);
+                    currentElements = new ArrayList<>();
                 }
                 currentHeading = line.strip();
+                currentElements.add(new ScriptElement(ElementType.SCENE_HEADING, currentHeading));
+                previousType = ElementType.SCENE_HEADING;
             } else if (currentHeading != null) {
+                // Preserve existing fullText behaviour: append every non-slugline
+                // line (including blank lines) so existing matchers and tests
+                // see byte-identical content.
                 currentBody.append(line).append('\n');
+
+                String stripped = line.strip();
+                if (stripped.isEmpty()) {
+                    continue;
+                }
+                ElementType type = classifyTextLine(stripped, previousType);
+                currentElements.add(new ScriptElement(type, stripped));
+                previousType = type;
             }
         }
 
         if (currentHeading != null) {
-            scenes.add(new Scene(nextSceneNumber, currentHeading, currentBody.toString().strip()));
+            scenes.add(new Scene(nextSceneNumber, currentHeading,
+                currentBody.toString().strip(), List.copyOf(currentElements)));
         }
 
         return scenes;
+    }
+
+    /**
+     * Heuristic line classification for the PDF path (FDX paragraphs carry
+     * explicit types). Order matters — earlier rules take precedence.
+     */
+    private static ElementType classifyTextLine(String stripped, ElementType previous) {
+        if (SLUGLINE.matcher(stripped).matches()) {
+            return ElementType.SCENE_HEADING;
+        }
+        if (stripped.startsWith("(") && stripped.endsWith(")")) {
+            return ElementType.PARENTHETICAL;
+        }
+        if (CHARACTER_CUE.matcher(stripped).matches() && hasLetter(stripped)) {
+            return ElementType.CHARACTER;
+        }
+        if (previous == ElementType.CHARACTER || previous == ElementType.PARENTHETICAL) {
+            return ElementType.DIALOGUE;
+        }
+        return ElementType.ACTION;
+    }
+
+    private static boolean hasLetter(String s) {
+        for (int i = 0; i < s.length(); i++) {
+            if (Character.isLetter(s.charAt(i))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public List<Scene> parseFromFDX(File fdxFile) throws IOException {
@@ -100,6 +153,7 @@ public class ScriptParser {
         List<Scene> scenes = new ArrayList<>();
         String currentHeading = null;
         StringBuilder currentBody = new StringBuilder();
+        List<ScriptElement> currentElements = new ArrayList<>();
         int nextSceneNumber = 1;
 
         for (int i = 0; i < paragraphs.getLength(); i++) {
@@ -109,21 +163,41 @@ public class ScriptParser {
 
             if ("Scene Heading".equals(type)) {
                 if (currentHeading != null) {
-                    scenes.add(new Scene(nextSceneNumber++, currentHeading, currentBody.toString().strip()));
+                    scenes.add(new Scene(nextSceneNumber++, currentHeading,
+                        currentBody.toString().strip(), List.copyOf(currentElements)));
                     currentBody.setLength(0);
+                    currentElements = new ArrayList<>();
                 }
                 currentHeading = text.strip();
-            } else if (currentHeading != null
-                    && ("Action".equals(type) || "Dialogue".equals(type))) {
-                currentBody.append(text).append('\n');
+                currentElements.add(new ScriptElement(ElementType.SCENE_HEADING, currentHeading));
+            } else if (currentHeading != null) {
+                // fullText keeps the legacy "Action + Dialogue only" contract.
+                if ("Action".equals(type) || "Dialogue".equals(type)) {
+                    currentBody.append(text).append('\n');
+                }
+                // elements is the full structured view of every paragraph type.
+                currentElements.add(new ScriptElement(mapFdxType(type), text.strip()));
             }
         }
 
         if (currentHeading != null) {
-            scenes.add(new Scene(nextSceneNumber, currentHeading, currentBody.toString().strip()));
+            scenes.add(new Scene(nextSceneNumber, currentHeading,
+                currentBody.toString().strip(), List.copyOf(currentElements)));
         }
 
         return scenes;
+    }
+
+    private static ElementType mapFdxType(String fdxType) {
+        return switch (fdxType) {
+            case "Scene Heading" -> ElementType.SCENE_HEADING;
+            case "Action" -> ElementType.ACTION;
+            case "Character" -> ElementType.CHARACTER;
+            case "Dialogue" -> ElementType.DIALOGUE;
+            case "Parenthetical" -> ElementType.PARENTHETICAL;
+            case "Transition" -> ElementType.TRANSITION;
+            default -> ElementType.OTHER;
+        };
     }
 
     private static String textOf(Element paragraph) {

@@ -14,23 +14,33 @@ import com.bintro.transcription.Transcriber;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.concurrent.Task;
+import javafx.concurrent.Worker;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
+import javafx.scene.control.MenuBar;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.cell.TextFieldTableCell;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.web.WebView;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 import javafx.util.converter.IntegerStringConverter;
+import netscape.javascript.JSObject;
 
 import java.io.File;
+import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +61,12 @@ import java.util.stream.Collectors;
  */
 public class MainController {
 
+    private static final String MAIN_FXML = "/fxml/MainView.fxml";
+    private static final String THEME_CSS = "/css/theme.css";
+    private static final String LOGO_RESOURCE = "/images/bintro-logo.png";
+    private static final String VERSION_STRING = "0.1.0 — Early Preview";
+
+    @FXML private MenuBar menuBar;
     @FXML private Button selectFootageButton;
     @FXML private Button selectScriptButton;
     @FXML private Button runButton;
@@ -74,12 +90,20 @@ public class MainController {
     private List<Clip> clips = new ArrayList<>();
     private List<Scene> scenes = new ArrayList<>();
 
+    /** Strong reference required — JSObject.setMember holds the bridge weakly. */
+    private ScriptViewBridge scriptBridge;
+
     @FXML
     private void initialize() {
         runButton.setDisable(true);
         exportButton.setDisable(true);
         statusLabel.setText("Ready");
         progressBar.setProgress(0);
+        // On macOS this puts the menu bar into the system menu strip; on
+        // other platforms JavaFX silently keeps it in-window.
+        if (menuBar != null) {
+            menuBar.setUseSystemMenuBar(true);
+        }
         setupClipTable();
 
         // Scroll the script viewer to the selected row's scene.
@@ -88,6 +112,21 @@ public class MainController {
                 return;
             }
             scrollScriptTo(newVm.sceneNumber());
+        });
+
+        // Re-install the Java-side bridge as `window.bintro` after every page
+        // load — loadContent() wipes the JS global, so we re-attach on each
+        // SUCCEEDED transition.
+        scriptBridge = new ScriptViewBridge(clipTable);
+        scriptWebView.getEngine().getLoadWorker().stateProperty().addListener((obs, oldS, newS) -> {
+            if (newS == Worker.State.SUCCEEDED) {
+                try {
+                    JSObject window = (JSObject) scriptWebView.getEngine().executeScript("window");
+                    window.setMember("bintro", scriptBridge);
+                } catch (Exception e) {
+                    System.err.println("MainController: failed to install JS bridge: " + e);
+                }
+            }
         });
     }
 
@@ -125,7 +164,7 @@ public class MainController {
         sceneNumberCol.setOnEditCommit(ev -> {
             Integer v = ev.getNewValue();
             ev.getRowValue().sceneNumberProperty().set(v == null ? 0 : v);
-            renderScriptWithHighlights();
+            refreshScriptView();
         });
 
         sceneHeadingCol.setCellValueFactory(c -> c.getValue().sceneHeadingProperty());
@@ -164,6 +203,7 @@ public class MainController {
         // Selecting new footage invalidates any previous analysis.
         exportButton.setDisable(true);
         updateRunEnabled();
+        updateWindowTitle();
     }
 
     @FXML
@@ -195,6 +235,7 @@ public class MainController {
         // Selecting a new script invalidates any previous analysis.
         exportButton.setDisable(true);
         updateRunEnabled();
+        updateWindowTitle();
     }
 
     /** Resets the clip table to placeholder VMs (no transcript, scene 0) using current state. */
@@ -282,7 +323,7 @@ public class MainController {
             List<ClipMatchViewModel> result = task.getValue();
             clipTable.setItems(FXCollections.observableArrayList(result));
             exportButton.setDisable(result.isEmpty());
-            renderScriptWithHighlights();
+            refreshScriptView();
         });
         task.setOnFailed(ev -> {
             runButton.setDisable(false);
@@ -364,11 +405,12 @@ public class MainController {
     }
 
     /**
-     * Re-renders the script viewer with the current table's match data.
-     * Safe to call before a script is loaded — the empty scene list yields an
-     * empty HTML document. Skips VMs with no scene assigned.
+     * Rebuilds and reloads the script-viewer HTML, grouping the current table's
+     * VMs by scene number for gutter-bar placement. Safe to call before a script
+     * is loaded — the empty scene list yields an empty document. Skips VMs with
+     * no scene assigned.
      */
-    private void renderScriptWithHighlights() {
+    private void refreshScriptView() {
         if (scenes == null || scenes.isEmpty()) {
             return;
         }
@@ -377,6 +419,94 @@ public class MainController {
             .collect(Collectors.groupingBy(ClipMatchViewModel::sceneNumber));
         scriptWebView.getEngine().loadContent(
             ScriptRenderer.render(scenes, byScene), "text/html");
+    }
+
+    /**
+     * Refreshes the host {@code Stage}'s title to reflect the currently loaded
+     * footage folder + script. No-op until the scene is attached to a window.
+     */
+    private void updateWindowTitle() {
+        if (clipTable == null || clipTable.getScene() == null) {
+            return;
+        }
+        Stage stage = (Stage) clipTable.getScene().getWindow();
+        if (stage == null) {
+            return;
+        }
+        StringBuilder title = new StringBuilder("Bintro");
+        if (footageFolder != null) {
+            title.append(" — ").append(footageFolder.getName());
+            if (scriptFile != null) {
+                title.append(" / ").append(scriptFile.getName());
+            }
+        }
+        stage.setTitle(title.toString());
+    }
+
+    /**
+     * Opens a fresh main window. Each menu invocation gets its own independent
+     * project state — the existing window stays open.
+     */
+    @FXML
+    private void onMenuNewProject() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource(MAIN_FXML));
+            Parent root = loader.load();
+            Stage stage = new Stage();
+            stage.setTitle("Bintro");
+            javafx.scene.Scene scene = new javafx.scene.Scene(root, 900, 600);
+            URL css = getClass().getResource(THEME_CSS);
+            if (css != null) {
+                scene.getStylesheets().add(css.toExternalForm());
+            }
+            stage.setScene(scene);
+            stage.show();
+        } catch (IOException e) {
+            System.err.println("MainController: failed to open new project window: " + e);
+            e.printStackTrace();
+        }
+    }
+
+    /** Open Project menu — stub mirroring the welcome screen's stub. */
+    @FXML
+    private void onMenuOpenProject() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Open Bintro Project");
+        chooser.getExtensionFilters().add(
+            new FileChooser.ExtensionFilter("Bintro Project", "*.bintro")
+        );
+        File chosen = chooser.showOpenDialog(
+            selectFootageButton.getScene().getWindow());
+        if (chosen != null) {
+            System.out.println("MainController: open project (stub): "
+                + chosen.getAbsolutePath());
+        }
+    }
+
+    @FXML
+    private void onMenuQuit() {
+        Platform.exit();
+    }
+
+    @FXML
+    private void onMenuAbout() {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("About Bintro");
+        alert.setHeaderText("Bintro");
+        alert.setContentText(VERSION_STRING);
+
+        URL logoUrl = getClass().getResource(LOGO_RESOURCE);
+        if (logoUrl != null) {
+            try {
+                ImageView graphic = new ImageView(new Image(logoUrl.toExternalForm()));
+                graphic.setFitWidth(160);
+                graphic.setPreserveRatio(true);
+                alert.setGraphic(graphic);
+            } catch (Exception ignored) {
+                // Logo is optional — fall back to text-only.
+            }
+        }
+        alert.showAndWait();
     }
 
     private void scrollScriptTo(int sceneNumber) {
