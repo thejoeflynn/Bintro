@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Offline keyword-overlap matcher used when no Claude API key is configured.
+ * Offline keyword-overlap matcher used when no AI backend is reachable.
  * Scores each scene by the number of non-stopword tokens it shares with the
  * transcript and returns the highest-scoring scene.
  */

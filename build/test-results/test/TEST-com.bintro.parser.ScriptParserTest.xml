@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.bintro.parser.ScriptParserTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-06-04T20:28:07" hostname="Joes-MacBook-Pro.local" time="0.002">
+<testsuite name="com.bintro.parser.ScriptParserTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-06-05T14:21:34" hostname="Joes-MacBook-Pro.local" time="0.001">
   <properties/>
-  <testcase name="ignoresContentBeforeFirstSlugline()" classname="com.bintro.parser.ScriptParserTest" time="0.001"/>
-  <testcase name="parsesScenesFromHardcodedScreenplay()" classname="com.bintro.parser.ScriptParserTest" time="0.001"/>
+  <testcase name="ignoresContentBeforeFirstSlugline()" classname="com.bintro.parser.ScriptParserTest" time="0.0"/>
+  <testcase name="parsesScenesFromHardcodedScreenplay()" classname="com.bintro.parser.ScriptParserTest" time="0.0"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>

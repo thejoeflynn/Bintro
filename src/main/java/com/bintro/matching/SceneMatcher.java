@@ -12,17 +12,18 @@ import java.time.Duration;
 import java.util.List;
 
 /**
- * Matches a clip transcript to a screenplay scene via the Claude Messages API.
+ * Matches a clip transcript to a screenplay scene via an OpenAI-compatible
+ * chat-completions endpoint — by default the Msty app running locally at
+ * {@code http://localhost:11434/v1}.
  *
  * <p>The request body is hand-rolled JSON to avoid adding a JSON dependency.
- * On any error (network, non-2xx, parse failure) the matcher returns
- * {@link MatchResult}({@code 0}, {@code 0.0}) — "Unmatched".
+ * On any error (backend not reachable, non-2xx, parse failure) the matcher
+ * silently falls back to {@link LocalSceneMatcher} so the pipeline always
+ * makes forward progress.
  */
 public class SceneMatcher {
 
-    private static final String ENDPOINT = "https://api.anthropic.com/v1/messages";
-    private static final String MODEL = "claude-haiku-4-5-20251001";
-    private static final String API_VERSION = "2023-06-01";
+    private static final String CHAT_PATH = "/chat/completions";
     private static final int MAX_SCENE_PREVIEW_CHARS = 200;
 
     private final HttpClient http = HttpClient.newBuilder()
@@ -34,20 +35,23 @@ public class SceneMatcher {
             + "' against " + scenes.size() + " scenes, transcript length="
             + (transcript == null ? 0 : transcript.length()) + " chars");
 
-        String apiKey = Config.get("claude.api.key");
-        if (apiKey == null || apiKey.isBlank() || "YOUR_CLAUDE_API_KEY_HERE".equals(apiKey)) {
-            System.out.println("SceneMatcher: no API key — using local keyword matcher");
+        String backendUrl = Config.get("ai.backend.url");
+        String model = Config.get("ai.match.model");
+        if (backendUrl == null || backendUrl.isBlank()
+            || model == null || model.isBlank()) {
+            System.out.println("SceneMatcher: ai.backend.url or ai.match.model unset — "
+                + "using local keyword matcher");
             return new LocalSceneMatcher().match(transcript, scenes);
         }
+        System.out.println("SceneMatcher: using Msty backend at " + backendUrl
+            + " with model " + model);
 
         try {
             String prompt = buildPrompt(transcript, scenes);
-            String body = buildRequestBody(prompt);
+            String body = buildRequestBody(model, prompt);
 
             HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(ENDPOINT))
-                .header("x-api-key", apiKey)
-                .header("anthropic-version", API_VERSION)
+                .uri(URI.create(joinUrl(backendUrl, CHAT_PATH)))
                 .header("content-type", "application/json")
                 .timeout(Duration.ofSeconds(60))
                 .POST(HttpRequest.BodyPublishers.ofString(body))
@@ -56,9 +60,9 @@ public class SceneMatcher {
             HttpResponse<String> resp = http.send(req, HttpResponse.BodyHandlers.ofString());
             if (resp.statusCode() / 100 != 2) {
                 System.err.println("SceneMatcher: HTTP " + resp.statusCode()
-                    + " for clip '" + clip.filename() + "'");
+                    + " for clip '" + clip.filename() + "' — falling back to keyword match");
                 System.err.println("SceneMatcher: response body: " + resp.body());
-                return unmatched();
+                return new LocalSceneMatcher().match(transcript, scenes);
             }
 
             int sceneNumber = extractSceneNumber(resp.body());
@@ -67,15 +71,25 @@ public class SceneMatcher {
                 ? new MatchResult(sceneNumber, 1.0)
                 : unmatched();
         } catch (Exception e) {
-            System.err.println("SceneMatcher: exception while matching '" + clip.filename()
-                + "': " + e.getClass().getSimpleName() + ": " + e.getMessage());
-            e.printStackTrace();
-            return unmatched();
+            System.err.println("SceneMatcher: Msty not reachable at " + backendUrl
+                + " — falling back to keyword match (" + e.getClass().getSimpleName()
+                + ": " + e.getMessage() + ")");
+            return new LocalSceneMatcher().match(transcript, scenes);
         }
     }
 
     private static MatchResult unmatched() {
         return new MatchResult(0, 0.0);
+    }
+
+    static String joinUrl(String base, String path) {
+        if (base.endsWith("/") && path.startsWith("/")) {
+            return base + path.substring(1);
+        }
+        if (!base.endsWith("/") && !path.startsWith("/")) {
+            return base + "/" + path;
+        }
+        return base + path;
     }
 
     private static String buildPrompt(String transcript, List<Scene> scenes) {
@@ -99,23 +113,24 @@ public class SceneMatcher {
         return sb.toString();
     }
 
-    private static String buildRequestBody(String prompt) {
+    private static String buildRequestBody(String model, String prompt) {
         return "{"
-            + "\"model\":" + jsonString(MODEL) + ","
+            + "\"model\":" + jsonString(model) + ","
+            + "\"messages\":[{\"role\":\"user\",\"content\":" + jsonString(prompt) + "}],"
             + "\"max_tokens\":16,"
-            + "\"messages\":[{\"role\":\"user\",\"content\":" + jsonString(prompt) + "}]"
+            + "\"temperature\":0.1"
             + "}";
     }
 
     /**
-     * Extracts the integer from the first {@code "text":"…"} field in a Messages
-     * API response. Tolerant of leading/trailing non-digit characters in the
-     * content (e.g. {@code "Scene 3"} → {@code 3}).
+     * Extracts the integer from the first {@code "content":"…"} field in an
+     * OpenAI-style chat-completions response. Tolerant of leading/trailing
+     * non-digit characters (e.g. {@code "Scene 3"} → {@code 3}).
      */
     static int extractSceneNumber(String responseJson) {
-        int textIdx = responseJson.indexOf("\"text\":");
-        while (textIdx >= 0) {
-            int quoteStart = responseJson.indexOf('"', textIdx + 7);
+        int idx = responseJson.indexOf("\"content\":");
+        while (idx >= 0) {
+            int quoteStart = responseJson.indexOf('"', idx + "\"content\":".length());
             if (quoteStart < 0) {
                 break;
             }
@@ -128,7 +143,7 @@ public class SceneMatcher {
             if (n != null) {
                 return n;
             }
-            textIdx = responseJson.indexOf("\"text\":", quoteEnd);
+            idx = responseJson.indexOf("\"content\":", quoteEnd);
         }
         return 0;
     }
@@ -168,7 +183,7 @@ public class SceneMatcher {
         return sb.toString();
     }
 
-    private static Integer firstInteger(String s) {
+    static Integer firstInteger(String s) {
         StringBuilder num = new StringBuilder();
         for (int i = 0; i < s.length(); i++) {
             char c = s.charAt(i);
@@ -188,7 +203,7 @@ public class SceneMatcher {
         }
     }
 
-    private static String jsonString(String s) {
+    static String jsonString(String s) {
         StringBuilder sb = new StringBuilder(s.length() + 2);
         sb.append('"');
         for (int i = 0; i < s.length(); i++) {

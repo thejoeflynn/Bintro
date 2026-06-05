@@ -5,6 +5,7 @@ import com.bintro.export.Exporter;
 import com.bintro.matching.MatchResult;
 import com.bintro.matching.MatchType;
 import com.bintro.matching.SceneMatcher;
+import com.bintro.matching.VisualMatcher;
 import com.bintro.media.Clip;
 import com.bintro.media.MediaScanner;
 import com.bintro.parser.Scene;
@@ -54,8 +55,8 @@ import java.util.stream.Collectors;
  * Drives the Bintro UI in two distinct phases:
  *
  * <ol>
- *   <li><b>Phase 1 — Analysis (Run button):</b> transcribe each clip, ask Claude
- *       for a scene match, populate the review table.</li>
+ *   <li><b>Phase 1 — Analysis (Run button):</b> transcribe each clip, route
+ *       it to the dialogue or visual matcher, populate the review table.</li>
  *   <li><b>Phase 2 — Export (Export button):</b> read the (possibly user-corrected)
  *       scene numbers out of the table and copy footage into per-scene folders.</li>
  * </ol>
@@ -314,7 +315,8 @@ public class MainController {
             @Override
             protected List<ClipMatchViewModel> call() {
                 Transcriber transcriber = new Transcriber();
-                SceneMatcher matcher = new SceneMatcher();
+                SceneMatcher dialogueMatcher = new SceneMatcher();
+                VisualMatcher visualMatcher = new VisualMatcher();
                 List<ClipMatchViewModel> rows = new ArrayList<>();
                 int total = clipsSnapshot.size();
 
@@ -324,34 +326,50 @@ public class MainController {
                     publish("Transcribing " + clip.filename() + " (" + idx + " of " + total + ")…",
                         (double) i / total);
 
-                    String transcript;
+                    // 1. Transcribe — failure isn't fatal; we'll route the
+                    //    clip through VisualMatcher instead.
+                    String transcript = "";
+                    boolean transcriptionFailed = false;
                     try {
                         transcript = transcriber.transcribe(clip);
                         appendTranscriptLog("[" + clip.filename() + "]\n" + transcript + "\n\n");
                     } catch (Exception e) {
+                        transcriptionFailed = true;
                         publish("Transcription failed for " + clip.filename() + ": " + e.getMessage(),
                             (double) idx / total);
                         appendTranscriptLog("[" + clip.filename() + "] — transcription failed: "
                             + e.getMessage() + "\n\n");
-                        rows.add(new ClipMatchViewModel(clip, "", 0, scenesSnapshot));
-                        continue;
                     }
 
-                    publish("Matching " + clip.filename() + " (" + idx + " of " + total + ")…",
-                        (double) i / total + 0.5 / total);
+                    // 2. Choose matcher. Anything with <5 stripped words gets
+                    //    the visual path — covers B-roll, plates, insert shots
+                    //    and any clip whisper couldn't make sense of.
+                    boolean useVisual = transcriptionFailed || !hasUsableTranscript(transcript);
+                    MatchType matchType = useVisual ? MatchType.VISUAL : MatchType.DIALOGUE;
 
                     MatchResult result;
                     try {
-                        result = matcher.match(clip, transcript, scenesSnapshot);
+                        if (useVisual) {
+                            publish("Visually analysing " + clip.filename()
+                                    + " (" + idx + " of " + total + ")…",
+                                (double) i / total + 0.5 / total);
+                            result = visualMatcher.match(clip, scenesSnapshot);
+                        } else {
+                            publish("Matching " + clip.filename() + " (" + idx + " of " + total + ")…",
+                                (double) i / total + 0.5 / total);
+                            result = dialogueMatcher.match(clip, transcript, scenesSnapshot);
+                        }
                     } catch (Exception e) {
                         publish("Match failed for " + clip.filename() + ": " + e.getMessage(),
                             (double) idx / total);
                         result = new MatchResult(0, 0.0);
                     }
 
-                    rows.add(new ClipMatchViewModel(clip, transcript, result.sceneNumber(), scenesSnapshot));
+                    rows.add(new ClipMatchViewModel(clip, transcript,
+                        result.sceneNumber(), scenesSnapshot, matchType));
                     publish(clip.filename() + " → "
-                            + (result.sceneNumber() > 0 ? "Scene " + result.sceneNumber() : "Unmatched"),
+                            + (result.sceneNumber() > 0 ? "Scene " + result.sceneNumber() : "Unmatched")
+                            + (useVisual ? " (visual)" : ""),
                         (double) idx / total);
                 }
                 publish("Analysis complete. Review matches, then click Export.", 1.0);
@@ -805,6 +823,23 @@ public class MainController {
      * scene number — and only the scene number — so legitimate trailing
      * digits ({@code "INT. ROOM 247"}) survive.
      */
+    /**
+     * Returns true when the transcript has enough signal to attempt dialogue
+     * matching. Five words is the threshold from the feature spec — short
+     * enough to keep utterances ("Help me!") on the dialogue path while
+     * routing silent clips and one-word noises through the visual matcher.
+     */
+    private static boolean hasUsableTranscript(String transcript) {
+        if (transcript == null) {
+            return false;
+        }
+        String stripped = transcript.strip();
+        if (stripped.isEmpty()) {
+            return false;
+        }
+        return stripped.split("\\s+").length >= 5;
+    }
+
     private static String cleanHeading(Scene s) {
         if (s == null || s.heading() == null) {
             return "";

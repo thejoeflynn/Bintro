@@ -7,7 +7,7 @@ import java.util.List;
  *
  * <p>{@code heading} and {@code fullText} are kept byte-identical to the
  * pre-Feature-10 shape (Action+Dialogue for FDX, non-slugline lines for PDF)
- * so {@code LocalSceneMatcher}, the Claude prompt builder and existing parser
+ * so {@code LocalSceneMatcher}, the AI prompt builders and existing parser
  * tests don't change behaviour. {@code elements} is a parallel structured
  * view used by {@code ScriptRenderer} for proper screenplay formatting and
  * per-element gutter-bar spans.
