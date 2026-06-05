@@ -36,6 +36,11 @@ public class ClipMatchViewModel {
     private final IntegerProperty sceneNumber;
     private final StringProperty sceneHeading;
     private final ObjectProperty<MatchType> matchType;
+    /** Editable base name (no extension) shown in the "Export Name" column. */
+    private final StringProperty exportName;
+    /** True once the user manually edits the export name; refresh-from-scene
+     *  skips customised rows so the user's choice survives scene-number edits. */
+    private boolean exportNameCustomized = false;
     private final List<Scene> scenes;
 
     public ClipMatchViewModel(Clip clip, String transcript, int sceneNumber, List<Scene> scenes) {
@@ -51,6 +56,7 @@ public class ClipMatchViewModel {
         this.sceneNumber = new SimpleIntegerProperty(sceneNumber);
         this.sceneHeading = new SimpleStringProperty(lookupHeading(sceneNumber));
         this.matchType = new SimpleObjectProperty<>(matchType == null ? MatchType.DIALOGUE : matchType);
+        this.exportName = new SimpleStringProperty("");
         this.sceneNumber.addListener((obs, oldV, newV) ->
             this.sceneHeading.set(lookupHeading(newV == null ? 0 : newV.intValue())));
     }
@@ -106,5 +112,37 @@ public class ClipMatchViewModel {
 
     public ObjectProperty<MatchType> matchTypeProperty() {
         return matchType;
+    }
+
+    public StringProperty exportNameProperty() {
+        return exportName;
+    }
+
+    public String getExportName() {
+        return exportName.get();
+    }
+
+    /**
+     * Sets the export-name value from the auto-computed path (e.g. after a
+     * scene-number edit). No-op when the user has customised the name —
+     * their choice wins.
+     */
+    public void setExportNameComputed(String value) {
+        if (!exportNameCustomized) {
+            exportName.set(value == null ? "" : value);
+        }
+    }
+
+    /**
+     * Sets the export-name value from a user edit and flips the customised
+     * flag so subsequent refreshes leave it alone.
+     */
+    public void setExportNameByUser(String value) {
+        exportNameCustomized = true;
+        exportName.set(value == null ? "" : value);
+    }
+
+    public boolean isExportNameCustomized() {
+        return exportNameCustomized;
     }
 }

@@ -79,6 +79,7 @@ public class MainController {
 
     @FXML private TableView<ClipMatchViewModel> clipTable;
     @FXML private TableColumn<ClipMatchViewModel, String> clipCol;
+    @FXML private TableColumn<ClipMatchViewModel, String> exportNameCol;
     @FXML private TableColumn<ClipMatchViewModel, String> transcriptCol;
     @FXML private TableColumn<ClipMatchViewModel, MatchType> typeCol;
     @FXML private TableColumn<ClipMatchViewModel, Integer> sceneNumberCol;
@@ -201,7 +202,33 @@ public class MainController {
         sceneNumberCol.setOnEditCommit(ev -> {
             Integer v = ev.getNewValue();
             ev.getRowValue().sceneNumberProperty().set(v == null ? 0 : v);
+            refreshExportNames();
             refreshScriptView();
+        });
+
+        // Editable export name. The cell italicises the value until the user
+        // edits it; committing an edit flips the customised flag on the VM
+        // so subsequent refreshes don't clobber it.
+        exportNameCol.setCellValueFactory(c -> c.getValue().exportNameProperty());
+        exportNameCol.setCellFactory(col ->
+            new TextFieldTableCell<ClipMatchViewModel, String>(
+                new javafx.util.converter.DefaultStringConverter()) {
+                @Override
+                public void updateItem(String item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || getTableRow() == null) {
+                        setStyle("");
+                        return;
+                    }
+                    ClipMatchViewModel vm = getTableRow().getItem();
+                    setStyle(vm != null && vm.isExportNameCustomized()
+                        ? ""
+                        : "-fx-font-style: italic;");
+                }
+            });
+        exportNameCol.setOnEditCommit(ev -> {
+            String newName = ev.getNewValue();
+            ev.getRowValue().setExportNameByUser(newName == null ? "" : newName);
         });
 
         sceneHeadingCol.setCellValueFactory(c -> c.getValue().sceneHeadingProperty());
@@ -389,6 +416,7 @@ public class MainController {
             List<ClipMatchViewModel> result = task.getValue();
             clipTable.setItems(FXCollections.observableArrayList(result));
             exportButton.setDisable(result.isEmpty());
+            refreshExportNames();
             refreshScriptView();
         });
         task.setOnFailed(ev -> {
@@ -418,8 +446,13 @@ public class MainController {
         }
 
         final List<ClipMatch> matches = clipTable.getItems().stream()
-            .map(vm -> new ClipMatch(vm.clip(), vm.sceneNumber()))
+            .map(vm -> new ClipMatch(vm.clip(), vm.sceneNumber(),
+                vm.isExportNameCustomized() && vm.getExportName() != null
+                    && !vm.getExportName().isBlank()
+                    ? vm.getExportName()
+                    : null))
             .toList();
+        final List<Scene> scenesSnapshot = List.copyOf(scenes);
         final File outputDir = new File(footageFolder.getParentFile(), "Bintro_Output");
 
         runButton.setDisable(true);
@@ -430,7 +463,7 @@ public class MainController {
         Task<File> task = new Task<>() {
             @Override
             protected File call() throws Exception {
-                new Exporter().export(matches, outputDir);
+                new Exporter().export(matches, scenesSnapshot, outputDir);
                 return outputDir;
             }
         };
@@ -468,6 +501,27 @@ public class MainController {
             transcriptLog.appendText(entry);
             transcriptLog.setScrollTop(Double.MAX_VALUE);
         });
+    }
+
+    /**
+     * Walks the clip table in display order and assigns each row the computed
+     * export base ({@code 01_001}, {@code Unmatched_001}, …). Rows the user
+     * has customised keep their typed name. Re-run after Phase 1 succeeds
+     * and after any scene-number edit so the column reflects the current
+     * grouping.
+     */
+    private void refreshExportNames() {
+        java.util.Map<Integer, Integer> counterByScene = new java.util.HashMap<>();
+        for (ClipMatchViewModel vm : clipTable.getItems()) {
+            int sceneNumber = vm.sceneNumber();
+            int counter = counterByScene.merge(sceneNumber, 1, Integer::sum);
+            // merge returns the new value, so the first call returns 1.
+            vm.setExportNameComputed(
+                com.bintro.export.Exporter.computeBase(sceneNumber, counter));
+        }
+        // Nudge the column to repaint italics/normal style for cells whose
+        // VM customised flag may have changed via an edit elsewhere.
+        clipTable.refresh();
     }
 
     /**

@@ -112,7 +112,8 @@
                                 <TableView fx:id="clipTable" editable="true" VBox.vgrow="ALWAYS">
                                     <columns>
                                         <TableColumn fx:id="clipCol" text="Clip" prefWidth="180"/>
-                                        <TableColumn fx:id="transcriptCol" text="Transcript" prefWidth="260"/>
+                                        <TableColumn fx:id="exportNameCol" text="Export Name" prefWidth="120"/>
+                                        <TableColumn fx:id="transcriptCol" text="Transcript" prefWidth="240"/>
                                         <TableColumn fx:id="typeCol" text="Type" prefWidth="80"/>
                                         <TableColumn fx:id="sceneNumberCol" text="Scene #" prefWidth="80"/>
                                         <TableColumn fx:id="sceneHeadingCol" text="Scene Heading" prefWidth="220"/>
