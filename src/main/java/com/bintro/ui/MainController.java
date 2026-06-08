@@ -1,5 +1,6 @@
 package com.bintro.ui;
 
+import com.bintro.App;
 import com.bintro.export.ClipMatch;
 import com.bintro.export.Exporter;
 import com.bintro.matching.MatchResult;
@@ -24,7 +25,6 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
-import javafx.scene.control.ListCell;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TableCell;
@@ -32,10 +32,10 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.cell.TextFieldTableCell;
-import javafx.scene.Node;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.web.WebView;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
@@ -67,11 +67,14 @@ import java.util.stream.Collectors;
 public class MainController {
 
     private static final String MAIN_FXML = "/fxml/MainView.fxml";
-    private static final String THEME_CSS = "/css/theme.css";
     private static final String LOGO_RESOURCE = "/images/bintro-logo.png";
     private static final String VERSION_STRING = "0.1.0 — Early Preview";
 
     @FXML private MenuBar menuBar;
+    @FXML private javafx.scene.control.RadioMenuItem themeLight;
+    @FXML private javafx.scene.control.RadioMenuItem themeDark;
+    @FXML private javafx.scene.control.RadioMenuItem themeNavy;
+    @FXML private javafx.scene.control.RadioMenuItem themeForest;
     @FXML private Button selectFootageButton;
     @FXML private Button selectScriptButton;
     @FXML private Button runButton;
@@ -94,6 +97,10 @@ public class MainController {
     @FXML private TextArea transcriptLog;
     @FXML private StackPane scriptStack;
     @FXML private WebView scriptWebView;
+    @FXML private VBox centerBox;
+
+    /** In-app video preview, lazily added below the SplitPane in initialize(). */
+    private VideoPlayerPanel videoPlayer;
 
     /** Created lazily when the user first opens a PDF script. */
     private PdfPageViewer pdfPageViewer;
@@ -120,8 +127,8 @@ public class MainController {
             menuBar.setUseSystemMenuBar(true);
         }
         setupClipTable();
-        setupSceneListStyle();
-        applyTableStyle();
+        wireThemeMenu();
+        applyThemeToCurrentScene();
 
         // Scroll the script viewer to the selected row's scene.
         clipTable.getSelectionModel().selectedItemProperty().addListener((obs, oldVm, newVm) -> {
@@ -130,6 +137,27 @@ public class MainController {
             }
             scrollScriptTo(newVm.sceneNumber());
         });
+
+        // Video preview lives below the SplitPane / Transcript Log. Hidden
+        // until the user picks a row in the clip table.
+        videoPlayer = new VideoPlayerPanel();
+        videoPlayer.setVisible(false);
+        videoPlayer.setManaged(false);
+        if (centerBox != null) {
+            centerBox.getChildren().add(videoPlayer);
+        }
+        clipTable.getSelectionModel().selectedItemProperty().addListener(
+            (obs, oldVm, newVm) -> {
+                if (newVm == null) {
+                    videoPlayer.stop();
+                    videoPlayer.setVisible(false);
+                    videoPlayer.setManaged(false);
+                    return;
+                }
+                videoPlayer.setVisible(true);
+                videoPlayer.setManaged(true);
+                videoPlayer.load(newVm.clip());
+            });
 
         // Re-install the Java-side bridge as `window.bintro` after every page
         // load — loadContent() wipes the JS global, so we re-attach on each
@@ -155,16 +183,19 @@ public class MainController {
             newScene.windowProperty().addListener((wObs, oldWin, newWin) -> {
                 if (newWin instanceof Stage stage) {
                     stage.addEventHandler(javafx.stage.WindowEvent.WINDOW_CLOSE_REQUEST,
-                        ev -> disposePdfViewer());
+                        ev -> disposeOnClose());
                 }
             });
         });
     }
 
-    /** Releases the lazy-renderer's threads and the open PDDocument, if any. */
-    private void disposePdfViewer() {
+    /** Releases the lazy-renderer's threads / open PDDocument / video player. */
+    private void disposeOnClose() {
         if (pdfPageViewer != null) {
             pdfPageViewer.dispose();
+        }
+        if (videoPlayer != null) {
+            videoPlayer.dispose();
         }
     }
 
@@ -704,89 +735,61 @@ public class MainController {
     }
 
     /**
-     * Styled scene-list rows: small text, alternating background, dark
-     * selected state. Applied via cell factory because the constraint is to
-     * avoid relying on theme.css.
+     * Builds the Theme menu's {@link javafx.scene.control.ToggleGroup}
+     * programmatically (instead of in FXML via {@code <fx:define>}) because
+     * the macOS system-menu adapter chokes on the latter — it sees a
+     * Theme submenu it considers empty and suppresses the entire View menu.
+     *
+     * <p>Each radio item also has a keyboard accelerator (⌘1/⌘2/⌘3/⌘4) so
+     * the user can still switch themes even if the menu ever fails to
+     * render in the system menu strip.
      */
-    private void setupSceneListStyle() {
-        if (sceneList == null) {
+    private void wireThemeMenu() {
+        if (themeLight == null) {
             return;
         }
-        sceneList.setCellFactory(lv -> new ListCell<>() {
-            {
-                // Re-style whenever selection state flips so the dark
-                // selection background follows row changes.
-                selectedProperty().addListener((obs, oldV, newV) -> restyle());
-            }
+        javafx.scene.control.ToggleGroup group = new javafx.scene.control.ToggleGroup();
+        themeLight.setToggleGroup(group);
+        themeDark.setToggleGroup(group);
+        themeNavy.setToggleGroup(group);
+        themeForest.setToggleGroup(group);
 
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                setText(empty || item == null ? null : item);
-                restyle();
+        group.selectedToggleProperty().addListener((obs, oldT, newT) -> {
+            if (newT == null) {
+                return;
             }
-
-            private void restyle() {
-                if (isEmpty()) {
-                    setStyle("");
-                    return;
-                }
-                boolean odd = getIndex() % 2 == 1;
-                boolean selected = isSelected();
-                String bg = selected ? "#111111" : (odd ? "#fafafa" : "#ffffff");
-                String fg = selected ? "#ffffff" : "#333333";
-                setStyle(
-                    "-fx-background-color: " + bg + ";"
-                        + "-fx-text-fill: " + fg + ";"
-                        + "-fx-font-size: 10px;"
-                        + "-fx-padding: 5 12 5 12;"
-                );
+            if (newT.getUserData() instanceof String themeName) {
+                App.setActiveTheme(themeName);
+                applyThemeToCurrentScene();
             }
         });
+
+        // Mirror the persisted active theme back into the menu so freshly
+        // opened project windows show the correct radio selection.
+        javafx.scene.control.RadioMenuItem target = switch (App.getActiveTheme()) {
+            case "dark"   -> themeDark;
+            case "navy"   -> themeNavy;
+            case "forest" -> themeForest;
+            default       -> themeLight;
+        };
+        target.setSelected(true);
     }
 
     /**
-     * Strips JavaFX's default table chrome and lightens the column-header
-     * strip. The column-header lookup needs layout to have run, so it's
-     * deferred onto the FX cycle (with a second-cycle retry if the lookup
-     * isn't ready yet).
+     * Pushes {@link App#getActiveTheme()} onto the scene root. Defers via
+     * {@code Platform.runLater} when the scene isn't attached yet (the
+     * theme menu fires during {@code initialize()}, before the FXML loader
+     * finishes wiring the scene graph).
      */
-    private void applyTableStyle() {
+    private void applyThemeToCurrentScene() {
         if (clipTable == null) {
             return;
         }
-        clipTable.setStyle(
-            "-fx-background-color: transparent;"
-                + "-fx-border-color: transparent;"
-        );
-        Platform.runLater(this::styleColumnHeaders);
-    }
-
-    private void styleColumnHeaders() {
-        if (clipTable == null) {
+        if (clipTable.getScene() == null) {
+            Platform.runLater(this::applyThemeToCurrentScene);
             return;
         }
-        Node header = clipTable.lookup(".column-header-background");
-        if (header == null) {
-            // Layout isn't ready yet; try once more next tick and give up
-            // silently if it's still not there.
-            Platform.runLater(() -> {
-                Node h = clipTable.lookup(".column-header-background");
-                if (h != null) {
-                    h.setStyle(
-                        "-fx-background-color: #fafafa;"
-                            + "-fx-border-color: #eeeeee;"
-                            + "-fx-border-width: 0 0 1 0;"
-                    );
-                }
-            });
-            return;
-        }
-        header.setStyle(
-            "-fx-background-color: #fafafa;"
-                + "-fx-border-color: #eeeeee;"
-                + "-fx-border-width: 0 0 1 0;"
-        );
+        App.applyActiveTheme(clipTable.getScene());
     }
 
     /**
@@ -801,10 +804,8 @@ public class MainController {
             Stage stage = new Stage();
             stage.setTitle("Bintro");
             javafx.scene.Scene scene = new javafx.scene.Scene(root, 900, 600);
-            URL css = getClass().getResource(THEME_CSS);
-            if (css != null) {
-                scene.getStylesheets().add(css.toExternalForm());
-            }
+            App.attachThemeStylesheet(scene);
+            App.applyActiveTheme(scene);
             stage.setScene(scene);
             stage.show();
         } catch (IOException e) {

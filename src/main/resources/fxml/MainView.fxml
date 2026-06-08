@@ -17,7 +17,6 @@
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TitledPane?>
-<?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
@@ -55,13 +54,10 @@
                         <items>
                             <Menu text="Theme">
                                 <items>
-                                    <fx:define>
-                                        <ToggleGroup fx:id="themeGroup"/>
-                                    </fx:define>
-                                    <RadioMenuItem text="Light" selected="true" toggleGroup="$themeGroup"/>
-                                    <RadioMenuItem text="Dark (Coming soon)" disable="true" toggleGroup="$themeGroup"/>
-                                    <RadioMenuItem text="Navy (Coming soon)" disable="true" toggleGroup="$themeGroup"/>
-                                    <RadioMenuItem text="Forest (Coming soon)" disable="true" toggleGroup="$themeGroup"/>
+                                    <RadioMenuItem fx:id="themeLight"  text="Light"  userData="light"  selected="true" accelerator="Shortcut+1"/>
+                                    <RadioMenuItem fx:id="themeDark"   text="Dark"   userData="dark"   accelerator="Shortcut+2"/>
+                                    <RadioMenuItem fx:id="themeNavy"   text="Navy"   userData="navy"   accelerator="Shortcut+3"/>
+                                    <RadioMenuItem fx:id="themeForest" text="Forest" userData="forest" accelerator="Shortcut+4"/>
                                 </items>
                             </Menu>
                         </items>
@@ -73,43 +69,37 @@
                     </Menu>
                 </menus>
             </MenuBar>
-            <HBox alignment="CENTER_LEFT"
-                  style="-fx-background-color: #ffffff; -fx-border-color: #dddddd; -fx-border-width: 0 0 1 0; -fx-padding: 7 12 7 12; -fx-spacing: 8;">
+            <HBox alignment="CENTER_LEFT" styleClass="bintro-toolbar">
                 <Button fx:id="selectFootageButton" text="Select Footage"
-                        onAction="#onSelectFootage"
-                        style="-fx-background-color: #111111; -fx-text-fill: #ffffff; -fx-font-size: 11px; -fx-padding: 5 14 5 14; -fx-background-radius: 4; -fx-border-color: transparent; -fx-cursor: hand;"/>
+                        onAction="#onSelectFootage" styleClass="bintro-toolbar-button"/>
                 <Button fx:id="selectScriptButton" text="Select Script"
-                        onAction="#onSelectScript"
-                        style="-fx-background-color: #111111; -fx-text-fill: #ffffff; -fx-font-size: 11px; -fx-padding: 5 14 5 14; -fx-background-radius: 4; -fx-border-color: transparent; -fx-cursor: hand;"/>
+                        onAction="#onSelectScript" styleClass="bintro-toolbar-button"/>
                 <Region HBox.hgrow="ALWAYS"/>
-                <Label fx:id="countBadge" text=""
-                       style="-fx-font-size: 10px; -fx-text-fill: #888888; -fx-background-color: #f0efe9; -fx-padding: 4 10 4 10; -fx-background-radius: 3; -fx-border-color: #dddddd; -fx-border-width: 1; -fx-border-radius: 3;"/>
+                <Label fx:id="countBadge" text="" styleClass="bintro-count-badge"/>
                 <Button fx:id="runButton" text="Run"
                         onAction="#onRun" disable="true"
-                        style="-fx-background-color: #111111; -fx-text-fill: #ffffff; -fx-font-size: 11px; -fx-padding: 5 14 5 14; -fx-background-radius: 4; -fx-border-color: transparent; -fx-cursor: hand;"/>
+                        styleClass="bintro-toolbar-button"/>
                 <Button fx:id="exportButton" text="Export"
                         onAction="#onExport" disable="true"
-                        style="-fx-background-color: transparent; -fx-text-fill: #aaaaaa; -fx-font-size: 11px; -fx-padding: 5 14 5 14; -fx-background-radius: 4; -fx-border-color: #cccccc; -fx-border-width: 1; -fx-border-radius: 4;"/>
+                        styleClass="bintro-toolbar-button-ghost"/>
             </HBox>
         </VBox>
     </top>
 
     <center>
-        <VBox>
+        <VBox fx:id="centerBox">
             <children>
                 <SplitPane dividerPositions="0.55" VBox.vgrow="ALWAYS">
                     <items>
                         <VBox spacing="0">
                             <children>
-                                <HBox alignment="CENTER_LEFT"
-                                      style="-fx-background-color: #ffffff; -fx-border-color: #eeeeee; -fx-border-width: 0 0 1 0; -fx-padding: 8 12 8 12;">
-                                    <Label text="FOOTAGE"
-                                           style="-fx-font-size: 10px; -fx-text-fill: #333333; -fx-font-weight: bold;"/>
+                                <HBox alignment="CENTER_LEFT" styleClass="bintro-footage-header">
+                                    <Label text="FOOTAGE" styleClass="bintro-footage-header-label"/>
                                     <Region HBox.hgrow="ALWAYS"/>
-                                    <Label fx:id="footageCountLabel" text=""
-                                           style="-fx-font-size: 10px; -fx-text-fill: #aaaaaa;"/>
+                                    <Label fx:id="footageCountLabel" text="" styleClass="bintro-footage-count"/>
                                 </HBox>
-                                <TableView fx:id="clipTable" editable="true" VBox.vgrow="ALWAYS">
+                                <TableView fx:id="clipTable" editable="true"
+                                           styleClass="bintro-clip-table" VBox.vgrow="ALWAYS">
                                     <columns>
                                         <TableColumn fx:id="clipCol" text="Clip" prefWidth="180"/>
                                         <TableColumn fx:id="exportNameCol" text="Export Name" prefWidth="120"/>
@@ -125,7 +115,7 @@
                             <tabs>
                                 <Tab text="Scenes">
                                     <content>
-                                        <ListView fx:id="sceneList"/>
+                                        <ListView fx:id="sceneList" styleClass="bintro-scene-list"/>
                                     </content>
                                 </Tab>
                                 <Tab text="Script">
@@ -149,12 +139,10 @@
     </center>
 
     <bottom>
-        <HBox spacing="12" alignment="CENTER_LEFT"
-              style="-fx-background-color: #f5f4f0; -fx-border-color: #dddddd; -fx-border-width: 1 0 0 0; -fx-padding: 5 12 5 12;">
+        <HBox spacing="12" alignment="CENTER_LEFT" styleClass="bintro-status-bar">
             <children>
                 <Label fx:id="statusLabel" text="Ready" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                <Label fx:id="pathLabel" text=""
-                       style="-fx-text-fill: #bbbbbb; -fx-font-size: 10px;"/>
+                <Label fx:id="pathLabel" text="" styleClass="bintro-path-label"/>
                 <ProgressBar fx:id="progressBar" progress="0.0" prefWidth="200"/>
             </children>
         </HBox>

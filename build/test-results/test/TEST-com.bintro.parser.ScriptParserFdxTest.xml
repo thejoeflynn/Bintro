@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.bintro.parser.ScriptParserFdxTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-06-05T16:05:43" hostname="Joes-MacBook-Pro.local" time="0.027">
+<testsuite name="com.bintro.parser.ScriptParserFdxTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-06-08T13:21:32" hostname="Joes-MacBook-Pro.local" time="0.029">
   <properties/>
-  <testcase name="parsesScenesFromHardcodedFdxXml()" classname="com.bintro.parser.ScriptParserFdxTest" time="0.025"/>
+  <testcase name="parsesScenesFromHardcodedFdxXml()" classname="com.bintro.parser.ScriptParserFdxTest" time="0.027"/>
   <testcase name="parseFactoryDispatchesByExtension()" classname="com.bintro.parser.ScriptParserFdxTest" time="0.001"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>

@@ -1,5 +1,7 @@
 package com.bintro.ui;
 
+import com.bintro.App;
+
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -13,7 +15,6 @@ import javafx.stage.Stage;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 
 /**
  * Drives the launch-screen window: dark background, branded logo, and the
@@ -24,7 +25,6 @@ public class WelcomeController {
 
     private static final String LOGO_RESOURCE = "/images/bintro-logo.png";
     private static final String MAIN_FXML = "/fxml/MainView.fxml";
-    private static final String THEME_CSS = "/css/theme.css";
 
     @FXML private ImageView logoImage;
     @FXML private Button newProjectButton;
@@ -83,9 +83,7 @@ public class WelcomeController {
     }
 
     private void applyTheme(Scene scene) {
-        URL css = getClass().getResource(THEME_CSS);
-        if (css != null) {
-            scene.getStylesheets().add(css.toExternalForm());
-        }
+        App.attachThemeStylesheet(scene);
+        App.applyActiveTheme(scene);
     }
 }
