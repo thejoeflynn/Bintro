@@ -55,6 +55,7 @@ public class App extends Application {
         // change, but a forced reapplication makes the swap immediate even
         // when descendant rules are gated on the root's class set.
         root.applyCss();
+        root.layout();
     }
 
     /**

@@ -11,7 +11,7 @@
 <StackPane xmlns="http://javafx.com/javafx/21"
            xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="com.bintro.ui.WelcomeController"
-           style="-fx-background-color: #111111;">
+           style="-fx-background-color: #141414;">
 
     <VBox alignment="CENTER" spacing="24">
         <padding>
@@ -22,22 +22,22 @@
         <ImageView fx:id="logoImage" fitWidth="280" preserveRatio="true"/>
 
         <!-- Subtitle. ALL CAPS in the literal because JavaFX CSS lacks a
-             reliable text-transform; the small grey color + uppercase
-             approximates the spec's letter-spaced caps. -->
+             reliable text-transform or letter-spacing; the small grey
+             color + uppercase approximates the spec's letter-spaced caps. -->
         <Label text="FOOTAGE ORGANIZER"
-               style="-fx-text-fill: #555555; -fx-font-size: 10px;"/>
+               style="-fx-text-fill: #606060; -fx-font-size: 10px;"/>
 
         <HBox alignment="CENTER" spacing="10">
             <Button fx:id="newProjectButton" text="New Project"
                     onAction="#onNewProject"
-                    style="-fx-background-color: #ffffff; -fx-text-fill: #111111; -fx-font-size: 12px; -fx-padding: 8 22 8 22; -fx-background-radius: 4; -fx-border-color: transparent; -fx-cursor: hand;"/>
+                    style="-fx-background-color: #f0f0f0; -fx-text-fill: #111111; -fx-font-size: 12px; -fx-padding: 8 22 8 22; -fx-background-radius: 5; -fx-border-color: transparent; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.35), 6, 0, 0, 2);"/>
             <Button fx:id="openProjectButton" text="Open Project"
                     onAction="#onOpenProject"
-                    style="-fx-background-color: transparent; -fx-text-fill: #aaaaaa; -fx-font-size: 12px; -fx-padding: 8 22 8 22; -fx-background-radius: 4; -fx-border-color: #444444; -fx-border-width: 1; -fx-border-radius: 4; -fx-cursor: hand;"/>
+                    style="-fx-background-color: transparent; -fx-text-fill: #888888; -fx-font-size: 12px; -fx-padding: 8 22 8 22; -fx-background-radius: 5; -fx-border-color: #555555; -fx-border-width: 1; -fx-border-radius: 5; -fx-cursor: hand;"/>
         </HBox>
 
         <Label text="0.1.0 — Early Preview"
-               style="-fx-text-fill: #444444; -fx-font-size: 10px;"/>
+               style="-fx-text-fill: #404040; -fx-font-size: 10px;"/>
     </VBox>
 
 </StackPane>

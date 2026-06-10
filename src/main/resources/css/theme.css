@@ -11,72 +11,95 @@
  * ancestor. Descendant selectors are evaluated against the current
  * scene-graph state every time CSS is re-applied.
  *
+ * NO @font-face here: the JavaFX 17 CssParser throws an NPE on
+ * @font-face blocks whose URL doesn't resolve, and that aborts the
+ * ENTIRE stylesheet (zero rules load). FragmentCore is loaded in
+ * App.loadFragmentCore() via Font.loadFont() instead, which fails
+ * soft. Keep it that way.
+ *
  * Viewers (script WebView, PDF page renderer) intentionally do NOT
  * follow the theme.
  * ─────────────────────────────────────────────────────────────
  */
 
-/* FragmentCore — loaded if the .ttf is present at runtime. */
-@font-face {
-    src: url('/fonts/FragmentCore.ttf');
-    -fx-font-family: 'FragmentCore';
-}
-
 /* ───── Base (Light) ───────────────────────────────────────── */
+/* 'System' is JavaFX's name for the native UI font — SF Pro on
+ * macOS, Segoe UI on Windows. (Web-CSS 'system-ui' lists don't
+ * resolve in JavaFX.) */
 .root {
-    -fx-background-color: #f5f4f0;
-    -fx-font-family: 'Courier New';
-    -fx-font-size: 13px;
+    -fx-background-color: #f2f2f2;
+    -fx-font-family: 'System';
+    -fx-font-size: 12px;
 }
 
 .bintro-toolbar {
     -fx-background-color: #ffffff;
-    -fx-border-color: #dddddd;
+    -fx-border-color: #e0e0e0;
     -fx-border-width: 0 0 1 0;
     -fx-padding: 7 12 7 12;
     -fx-spacing: 8;
 }
 
 .bintro-toolbar-button {
-    -fx-background-color: #111111;
+    -fx-background-color: #1a1a1a;
     -fx-text-fill: #ffffff;
     -fx-font-size: 11px;
-    -fx-padding: 5 14 5 14;
-    -fx-background-radius: 4;
+    -fx-font-weight: bold;
+    -fx-padding: 6 16 6 16;
+    -fx-background-radius: 5;
     -fx-border-color: transparent;
     -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.18), 4, 0, 0, 1);
 }
-.bintro-toolbar-button:hover { -fx-opacity: 0.9; }
-.bintro-toolbar-button:disabled { -fx-opacity: 0.4; -fx-cursor: default; }
+.bintro-toolbar-button:hover {
+    -fx-background-color: #333333;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.28), 6, 0, 0, 2);
+}
+.bintro-toolbar-button:pressed {
+    -fx-background-color: #000000;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.10), 2, 0, 0, 0);
+}
+.bintro-toolbar-button:disabled {
+    -fx-opacity: 0.38;
+    -fx-cursor: default;
+    -fx-effect: none;
+}
 
 .bintro-toolbar-button-ghost {
     -fx-background-color: transparent;
-    -fx-text-fill: #aaaaaa;
+    -fx-text-fill: #555555;
     -fx-font-size: 11px;
-    -fx-padding: 5 14 5 14;
-    -fx-background-radius: 4;
-    -fx-border-color: #cccccc;
+    -fx-padding: 5 15 5 15;
+    -fx-background-radius: 5;
+    -fx-border-color: #c8c8c8;
     -fx-border-width: 1;
-    -fx-border-radius: 4;
+    -fx-border-radius: 5;
     -fx-cursor: hand;
 }
-.bintro-toolbar-button-ghost:hover { -fx-opacity: 0.9; }
-.bintro-toolbar-button-ghost:disabled { -fx-opacity: 0.4; -fx-cursor: default; }
+.bintro-toolbar-button-ghost:hover {
+    -fx-background-color: #f0f0f0;
+    -fx-border-color: #aaaaaa;
+    -fx-text-fill: #1a1a1a;
+}
+.bintro-toolbar-button-ghost:disabled {
+    -fx-opacity: 0.38;
+    -fx-cursor: default;
+}
 
 .bintro-count-badge {
     -fx-font-size: 10px;
-    -fx-text-fill: #888888;
-    -fx-background-color: #f0efe9;
-    -fx-padding: 4 10 4 10;
-    -fx-background-radius: 3;
-    -fx-border-color: #dddddd;
+    -fx-text-fill: #777777;
+    -fx-background-color: #f0f0f0;
+    -fx-padding: 3 10 3 10;
+    -fx-background-radius: 4;
+    -fx-border-color: #e0e0e0;
     -fx-border-width: 1;
-    -fx-border-radius: 3;
+    -fx-border-radius: 4;
 }
 
 .bintro-footage-header {
-    -fx-background-color: #ffffff;
-    -fx-border-color: #eeeeee;
+    -fx-background-color: #f8f8f8;
+    -fx-border-color: #e0e0e0;
     -fx-border-width: 0 0 1 0;
     -fx-padding: 8 12 8 12;
 }
@@ -87,225 +110,316 @@
 }
 .bintro-footage-count {
     -fx-font-size: 10px;
-    -fx-text-fill: #aaaaaa;
+    -fx-text-fill: #888888;
 }
 
 .bintro-status-bar {
-    -fx-background-color: #f5f4f0;
-    -fx-border-color: #dddddd;
+    -fx-background-color: #ebebeb;
+    -fx-border-color: #e0e0e0;
     -fx-border-width: 1 0 0 0;
-    -fx-padding: 5 12 5 12;
+    -fx-padding: 4 12 4 12;
+    -fx-spacing: 10;
+}
+.bintro-status-bar .label {
+    -fx-font-size: 11px;
+    -fx-text-fill: #555555;
 }
 .bintro-path-label {
-    -fx-text-fill: #bbbbbb;
+    -fx-text-fill: #aaaaaa;
     -fx-font-size: 10px;
 }
 
+/* ───── Clip table (Light) ─────────────────────────────────── */
 .bintro-clip-table {
     -fx-background-color: transparent;
     -fx-border-color: transparent;
+    -fx-table-cell-border-color: transparent;
+}
+.bintro-clip-table:focused {
+    -fx-background-color: transparent;
 }
 .bintro-clip-table .column-header-background {
-    -fx-background-color: #fafafa;
-    -fx-border-color: #eeeeee;
+    -fx-background-color: #f8f8f8;
+    -fx-border-color: #e0e0e0;
     -fx-border-width: 0 0 1 0;
 }
-
-.bintro-scene-list {
+.bintro-clip-table .column-header,
+.bintro-clip-table .filler {
+    -fx-background-color: transparent;
+}
+.bintro-clip-table .column-header .label {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #999999;
+    -fx-alignment: center-left;
+    -fx-padding: 0 8 0 8;
+}
+.bintro-clip-table .table-row-cell {
     -fx-background-color: #ffffff;
+    -fx-border-color: transparent transparent #f0f0f0 transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-cell-size: 32px;
+}
+.bintro-clip-table .table-row-cell:odd {
+    -fx-background-color: #f8f8f8;
+}
+.bintro-clip-table .table-row-cell:selected {
+    -fx-background-color: #1a1a1a;
+}
+.bintro-clip-table .table-cell {
+    -fx-font-size: 11px;
+    -fx-text-fill: #333333;
+    -fx-padding: 0 8 0 8;
+    -fx-border-color: transparent;
+}
+.bintro-clip-table .table-row-cell:selected .table-cell {
+    -fx-text-fill: #ffffff;
+}
+
+/* ───── Scene list (Light) ─────────────────────────────────── */
+/* Hover comes BEFORE the :selected rules: JavaFX CSS has no `:!selected`
+ * negation, so the later equal-specificity selected rules win when a
+ * selected cell is hovered. */
+.bintro-scene-list {
+    -fx-background-color: #f8f8f8;
     -fx-border-color: transparent;
 }
 .bintro-scene-list .list-cell {
-    -fx-background-color: #ffffff;
-    -fx-text-fill: #333333;
-    -fx-font-size: 10px;
-    -fx-padding: 5 12 5 12;
+    -fx-background-color: transparent;
+    -fx-text-fill: #444444;
+    -fx-font-size: 11px;
+    -fx-padding: 6 12 6 12;
+    -fx-border-color: transparent transparent #f0f0f0 transparent;
+    -fx-border-width: 0 0 1 0;
 }
 .bintro-scene-list .list-cell:odd {
-    -fx-background-color: #fafafa;
+    -fx-background-color: #f2f2f2;
+}
+.bintro-scene-list .list-cell:hover {
+    -fx-background-color: #ebebeb;
 }
 .bintro-scene-list .list-cell:selected,
-.bintro-scene-list .list-cell:selected:odd {
-    -fx-background-color: #111111;
+.bintro-scene-list .list-cell:selected:odd,
+.bintro-scene-list .list-cell:selected:hover {
+    -fx-background-color: #1a1a1a;
     -fx-text-fill: #ffffff;
 }
 
 
 /* ───── Dark theme ─────────────────────────────────────────── */
-.theme-dark { -fx-background-color: #1e1e1e; }
+.theme-dark { -fx-background-color: #1c1c1e; }
 
 .theme-dark .bintro-toolbar {
-    -fx-background-color: #252525;
-    -fx-border-color: #383838;
+    -fx-background-color: #2a2a2c;
+    -fx-border-color: #3a3a3c;
 }
 .theme-dark .bintro-toolbar-button {
-    -fx-background-color: #f0f0f0;
+    -fx-background-color: #e8e8e8;
     -fx-text-fill: #111111;
+}
+.theme-dark .bintro-toolbar-button:hover {
+    -fx-background-color: #ffffff;
+}
+.theme-dark .bintro-toolbar-button:pressed {
+    -fx-background-color: #c8c8c8;
 }
 .theme-dark .bintro-toolbar-button-ghost {
     -fx-text-fill: #aaaaaa;
-    -fx-border-color: #555555;
+    -fx-border-color: #444444;
+}
+.theme-dark .bintro-toolbar-button-ghost:hover {
+    -fx-background-color: #333333;
+    -fx-border-color: #888888;
+    -fx-text-fill: #e0e0e0;
 }
 .theme-dark .bintro-count-badge {
-    -fx-background-color: #2a2a2a;
-    -fx-text-fill: #aaaaaa;
-    -fx-border-color: #383838;
+    -fx-background-color: #2a2a2c;
+    -fx-text-fill: #888888;
+    -fx-border-color: #3a3a3c;
 }
 .theme-dark .bintro-footage-header {
-    -fx-background-color: #252525;
-    -fx-border-color: #383838;
+    -fx-background-color: #2a2a2c;
+    -fx-border-color: #3a3a3c;
 }
-.theme-dark .bintro-footage-header-label { -fx-text-fill: #d8d8d8; }
+.theme-dark .bintro-footage-header-label { -fx-text-fill: #e0e0e0; }
 .theme-dark .bintro-footage-count        { -fx-text-fill: #888888; }
 .theme-dark .bintro-status-bar {
-    -fx-background-color: #181818;
-    -fx-border-color: #383838;
+    -fx-background-color: #141416;
+    -fx-border-color: #3a3a3c;
 }
-.theme-dark .bintro-status-bar > .label { -fx-text-fill: #d0d0d0; }
-.theme-dark .bintro-path-label { -fx-text-fill: #777777; }
+.theme-dark .bintro-status-bar .label { -fx-text-fill: #e0e0e0; }
+.theme-dark .bintro-path-label { -fx-text-fill: #888888; }
+
 .theme-dark .bintro-clip-table .column-header-background {
-    -fx-background-color: #252525;
-    -fx-border-color: #383838;
+    -fx-background-color: #2a2a2c;
+    -fx-border-color: #3a3a3c;
 }
-.theme-dark .bintro-clip-table .column-header .label { -fx-text-fill: #d0d0d0; }
+.theme-dark .bintro-clip-table .column-header .label { -fx-text-fill: #888888; }
 .theme-dark .bintro-clip-table .table-row-cell {
-    -fx-background-color: #1e1e1e;
-    -fx-text-fill: #d0d0d0;
+    -fx-background-color: #1c1c1e;
+    -fx-border-color: transparent transparent #2a2a2c transparent;
 }
-.theme-dark .bintro-clip-table .table-row-cell:odd {
-    -fx-background-color: #252525;
-}
-.theme-dark .bintro-clip-table .table-cell { -fx-text-fill: #d0d0d0; }
-.theme-dark .bintro-scene-list { -fx-background-color: #1e1e1e; }
+.theme-dark .bintro-clip-table .table-row-cell:odd { -fx-background-color: #222224; }
+.theme-dark .bintro-clip-table .table-row-cell:selected { -fx-background-color: #f0f0f0; }
+.theme-dark .bintro-clip-table .table-cell { -fx-text-fill: #e0e0e0; }
+.theme-dark .bintro-clip-table .table-row-cell:selected .table-cell { -fx-text-fill: #111111; }
+
+.theme-dark .bintro-scene-list { -fx-background-color: #1c1c1e; }
 .theme-dark .bintro-scene-list .list-cell {
-    -fx-background-color: #1e1e1e;
-    -fx-text-fill: #d8d8d8;
+    -fx-text-fill: #e0e0e0;
+    -fx-border-color: transparent transparent #2a2a2c transparent;
 }
-.theme-dark .bintro-scene-list .list-cell:odd {
-    -fx-background-color: #252525;
-}
+.theme-dark .bintro-scene-list .list-cell:odd { -fx-background-color: #222224; }
+.theme-dark .bintro-scene-list .list-cell:hover { -fx-background-color: #2e2e30; }
 .theme-dark .bintro-scene-list .list-cell:selected,
-.theme-dark .bintro-scene-list .list-cell:selected:odd {
-    -fx-background-color: #ffffff;
+.theme-dark .bintro-scene-list .list-cell:selected:odd,
+.theme-dark .bintro-scene-list .list-cell:selected:hover {
+    -fx-background-color: #f0f0f0;
     -fx-text-fill: #111111;
 }
 
 
 /* ───── Navy theme ─────────────────────────────────────────── */
-.theme-navy { -fx-background-color: #0e1a2e; }
+.theme-navy { -fx-background-color: #0f1c30; }
 
 .theme-navy .bintro-toolbar {
-    -fx-background-color: #142440;
-    -fx-border-color: #243854;
+    -fx-background-color: #162540;
+    -fx-border-color: #253a5a;
 }
 .theme-navy .bintro-toolbar-button {
-    -fx-background-color: #4a90d9;
+    -fx-background-color: #4a8fd4;
     -fx-text-fill: #ffffff;
 }
+.theme-navy .bintro-toolbar-button:hover {
+    -fx-background-color: #5b9fe0;
+}
+.theme-navy .bintro-toolbar-button:pressed {
+    -fx-background-color: #3a7cba;
+}
 .theme-navy .bintro-toolbar-button-ghost {
-    -fx-text-fill: #a0b0c8;
-    -fx-border-color: #3a4a6e;
+    -fx-text-fill: #7a90b0;
+    -fx-border-color: #253a5a;
+}
+.theme-navy .bintro-toolbar-button-ghost:hover {
+    -fx-background-color: #1b2c4c;
+    -fx-border-color: #3a557e;
+    -fx-text-fill: #d8e4f4;
 }
 .theme-navy .bintro-count-badge {
-    -fx-background-color: #1a2a4a;
-    -fx-text-fill: #a0b0c8;
-    -fx-border-color: #243854;
+    -fx-background-color: #162540;
+    -fx-text-fill: #7a90b0;
+    -fx-border-color: #253a5a;
 }
 .theme-navy .bintro-footage-header {
-    -fx-background-color: #142440;
-    -fx-border-color: #243854;
+    -fx-background-color: #162540;
+    -fx-border-color: #253a5a;
 }
-.theme-navy .bintro-footage-header-label { -fx-text-fill: #d8e0f0; }
-.theme-navy .bintro-footage-count        { -fx-text-fill: #7a8aa8; }
+.theme-navy .bintro-footage-header-label { -fx-text-fill: #d8e4f4; }
+.theme-navy .bintro-footage-count        { -fx-text-fill: #7a90b0; }
 .theme-navy .bintro-status-bar {
-    -fx-background-color: #0a1424;
-    -fx-border-color: #243854;
+    -fx-background-color: #0b1626;
+    -fx-border-color: #253a5a;
 }
-.theme-navy .bintro-status-bar > .label { -fx-text-fill: #c8d4e8; }
-.theme-navy .bintro-path-label { -fx-text-fill: #6a7a98; }
+.theme-navy .bintro-status-bar .label { -fx-text-fill: #d8e4f4; }
+.theme-navy .bintro-path-label { -fx-text-fill: #7a90b0; }
+
 .theme-navy .bintro-clip-table .column-header-background {
-    -fx-background-color: #142440;
-    -fx-border-color: #243854;
+    -fx-background-color: #162540;
+    -fx-border-color: #253a5a;
 }
-.theme-navy .bintro-clip-table .column-header .label { -fx-text-fill: #c8d4e8; }
+.theme-navy .bintro-clip-table .column-header .label { -fx-text-fill: #7a90b0; }
 .theme-navy .bintro-clip-table .table-row-cell {
-    -fx-background-color: #0e1a2e;
-    -fx-text-fill: #d8e0f0;
+    -fx-background-color: #0f1c30;
+    -fx-border-color: transparent transparent #1b2a46 transparent;
 }
-.theme-navy .bintro-clip-table .table-row-cell:odd {
-    -fx-background-color: #142440;
-}
-.theme-navy .bintro-clip-table .table-cell { -fx-text-fill: #d8e0f0; }
-.theme-navy .bintro-scene-list { -fx-background-color: #0e1a2e; }
+.theme-navy .bintro-clip-table .table-row-cell:odd { -fx-background-color: #14223a; }
+.theme-navy .bintro-clip-table .table-row-cell:selected { -fx-background-color: #4a8fd4; }
+.theme-navy .bintro-clip-table .table-cell { -fx-text-fill: #d8e4f4; }
+.theme-navy .bintro-clip-table .table-row-cell:selected .table-cell { -fx-text-fill: #ffffff; }
+
+.theme-navy .bintro-scene-list { -fx-background-color: #0f1c30; }
 .theme-navy .bintro-scene-list .list-cell {
-    -fx-background-color: #0e1a2e;
-    -fx-text-fill: #d8e0f0;
+    -fx-text-fill: #d8e4f4;
+    -fx-border-color: transparent transparent #1b2a46 transparent;
 }
-.theme-navy .bintro-scene-list .list-cell:odd {
-    -fx-background-color: #142440;
-}
+.theme-navy .bintro-scene-list .list-cell:odd { -fx-background-color: #14223a; }
+.theme-navy .bintro-scene-list .list-cell:hover { -fx-background-color: #1b2c4c; }
 .theme-navy .bintro-scene-list .list-cell:selected,
-.theme-navy .bintro-scene-list .list-cell:selected:odd {
-    -fx-background-color: #4a90d9;
+.theme-navy .bintro-scene-list .list-cell:selected:odd,
+.theme-navy .bintro-scene-list .list-cell:selected:hover {
+    -fx-background-color: #4a8fd4;
     -fx-text-fill: #ffffff;
 }
 
 
 /* ───── Forest theme ───────────────────────────────────────── */
-.theme-forest { -fx-background-color: #1a2a1f; }
+.theme-forest { -fx-background-color: #1a2820; }
 
 .theme-forest .bintro-toolbar {
-    -fx-background-color: #243a2a;
-    -fx-border-color: #345040;
+    -fx-background-color: #223328;
+    -fx-border-color: #304838;
 }
 .theme-forest .bintro-toolbar-button {
-    -fx-background-color: #5aaa6a;
+    -fx-background-color: #4ea860;
     -fx-text-fill: #ffffff;
 }
+.theme-forest .bintro-toolbar-button:hover {
+    -fx-background-color: #5cb86e;
+}
+.theme-forest .bintro-toolbar-button:pressed {
+    -fx-background-color: #419252;
+}
 .theme-forest .bintro-toolbar-button-ghost {
-    -fx-text-fill: #a0b8a8;
-    -fx-border-color: #466050;
+    -fx-text-fill: #7a9a80;
+    -fx-border-color: #304838;
+}
+.theme-forest .bintro-toolbar-button-ghost:hover {
+    -fx-background-color: #243c2e;
+    -fx-border-color: #46624e;
+    -fx-text-fill: #d4e8d8;
 }
 .theme-forest .bintro-count-badge {
-    -fx-background-color: #2a4a35;
-    -fx-text-fill: #a0b8a8;
-    -fx-border-color: #345040;
+    -fx-background-color: #223328;
+    -fx-text-fill: #7a9a80;
+    -fx-border-color: #304838;
 }
 .theme-forest .bintro-footage-header {
-    -fx-background-color: #243a2a;
-    -fx-border-color: #345040;
+    -fx-background-color: #223328;
+    -fx-border-color: #304838;
 }
-.theme-forest .bintro-footage-header-label { -fx-text-fill: #d8e8dc; }
-.theme-forest .bintro-footage-count        { -fx-text-fill: #88a094; }
+.theme-forest .bintro-footage-header-label { -fx-text-fill: #d4e8d8; }
+.theme-forest .bintro-footage-count        { -fx-text-fill: #7a9a80; }
 .theme-forest .bintro-status-bar {
-    -fx-background-color: #14201a;
-    -fx-border-color: #345040;
+    -fx-background-color: #141f18;
+    -fx-border-color: #304838;
 }
-.theme-forest .bintro-status-bar > .label { -fx-text-fill: #cce0d0; }
-.theme-forest .bintro-path-label { -fx-text-fill: #7a9080; }
+.theme-forest .bintro-status-bar .label { -fx-text-fill: #d4e8d8; }
+.theme-forest .bintro-path-label { -fx-text-fill: #7a9a80; }
+
 .theme-forest .bintro-clip-table .column-header-background {
-    -fx-background-color: #243a2a;
-    -fx-border-color: #345040;
+    -fx-background-color: #223328;
+    -fx-border-color: #304838;
 }
-.theme-forest .bintro-clip-table .column-header .label { -fx-text-fill: #cce0d0; }
+.theme-forest .bintro-clip-table .column-header .label { -fx-text-fill: #7a9a80; }
 .theme-forest .bintro-clip-table .table-row-cell {
-    -fx-background-color: #1a2a1f;
-    -fx-text-fill: #d8e8dc;
+    -fx-background-color: #1a2820;
+    -fx-border-color: transparent transparent #263a2c transparent;
 }
-.theme-forest .bintro-clip-table .table-row-cell:odd {
-    -fx-background-color: #243a2a;
-}
-.theme-forest .bintro-clip-table .table-cell { -fx-text-fill: #d8e8dc; }
-.theme-forest .bintro-scene-list { -fx-background-color: #1a2a1f; }
+.theme-forest .bintro-clip-table .table-row-cell:odd { -fx-background-color: #203026; }
+.theme-forest .bintro-clip-table .table-row-cell:selected { -fx-background-color: #4ea860; }
+.theme-forest .bintro-clip-table .table-cell { -fx-text-fill: #d4e8d8; }
+.theme-forest .bintro-clip-table .table-row-cell:selected .table-cell { -fx-text-fill: #ffffff; }
+
+.theme-forest .bintro-scene-list { -fx-background-color: #1a2820; }
 .theme-forest .bintro-scene-list .list-cell {
-    -fx-background-color: #1a2a1f;
-    -fx-text-fill: #d8e8dc;
+    -fx-text-fill: #d4e8d8;
+    -fx-border-color: transparent transparent #263a2c transparent;
 }
-.theme-forest .bintro-scene-list .list-cell:odd {
-    -fx-background-color: #243a2a;
-}
+.theme-forest .bintro-scene-list .list-cell:odd { -fx-background-color: #203026; }
+.theme-forest .bintro-scene-list .list-cell:hover { -fx-background-color: #243c2e; }
 .theme-forest .bintro-scene-list .list-cell:selected,
-.theme-forest .bintro-scene-list .list-cell:selected:odd {
-    -fx-background-color: #5aaa6a;
+.theme-forest .bintro-scene-list .list-cell:selected:odd,
+.theme-forest .bintro-scene-list .list-cell:selected:hover {
+    -fx-background-color: #4ea860;
     -fx-text-fill: #ffffff;
 }
