@@ -23,6 +23,11 @@
 hs_err_pid*
 replay_pid*
 
+# Build output
+target/
+build/
+.gradle/
+
 # Whisper binary and models (platform-specific, too large for git)
 whisper/whisper
 whisper/whisper.exe
