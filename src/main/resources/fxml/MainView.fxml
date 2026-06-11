@@ -16,7 +16,6 @@
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextArea?>
-<?import javafx.scene.control.TitledPane?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
@@ -24,7 +23,8 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.web.WebView?>
 
-<BorderPane xmlns="http://javafx.com/javafx/21"
+<BorderPane fx:id="mainRoot"
+            xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.bintro.ui.MainController">
 
@@ -95,56 +95,51 @@
                 <SplitPane fx:id="mainVerticalSplit" orientation="VERTICAL"
                            dividerPositions="0.70" VBox.vgrow="ALWAYS">
                     <items>
-                        <VBox fx:id="topHalf">
-                            <children>
-                                <SplitPane dividerPositions="0.55" VBox.vgrow="ALWAYS">
-                                    <items>
-                                        <VBox spacing="0">
-                                            <children>
-                                                <HBox alignment="CENTER_LEFT" styleClass="bintro-footage-header">
-                                                    <Label text="FOOTAGE" styleClass="bintro-footage-header-label"/>
-                                                    <Region HBox.hgrow="ALWAYS"/>
-                                                    <Label fx:id="footageCountLabel" text="" styleClass="bintro-footage-count"/>
-                                                </HBox>
-                                                <TableView fx:id="clipTable" editable="true"
-                                                           styleClass="bintro-clip-table" VBox.vgrow="ALWAYS">
-                                                    <columns>
-                                                        <TableColumn fx:id="clipCol" text="Clip" prefWidth="180"/>
-                                                        <TableColumn fx:id="exportNameCol" text="Export Name" prefWidth="120"/>
-                                                        <TableColumn fx:id="transcriptCol" text="Transcript" prefWidth="240"/>
-                                                        <TableColumn fx:id="typeCol" text="Type" prefWidth="80"/>
-                                                        <TableColumn fx:id="sceneNumberCol" text="Scene #" prefWidth="80"/>
-                                                        <TableColumn fx:id="sceneHeadingCol" text="Scene Heading" prefWidth="220"/>
-                                                    </columns>
-                                                </TableView>
-                                            </children>
-                                        </VBox>
-                                        <TabPane tabClosingPolicy="UNAVAILABLE" styleClass="bintro-tab-pane">
-                                            <tabs>
-                                                <Tab text="Scenes">
-                                                    <content>
-                                                        <ListView fx:id="sceneList" styleClass="bintro-scene-list"/>
-                                                    </content>
-                                                </Tab>
-                                                <Tab text="Script">
-                                                    <content>
-                                                        <StackPane fx:id="scriptStack">
-                                                            <WebView fx:id="scriptWebView"/>
-                                                        </StackPane>
-                                                    </content>
-                                                </Tab>
-                                            </tabs>
-                                        </TabPane>
-                                    </items>
-                                </SplitPane>
-                                <TitledPane text="Transcript Log" expanded="false" animated="true"
-                                            styleClass="bintro-titled-pane">
-                                    <content>
-                                        <TextArea fx:id="transcriptLog" editable="false" wrapText="true" prefHeight="120"/>
-                                    </content>
-                                </TitledPane>
-                            </children>
-                        </VBox>
+                        <SplitPane dividerPositions="0.55">
+                            <items>
+                                <VBox spacing="0">
+                                    <children>
+                                        <HBox alignment="CENTER_LEFT" styleClass="bintro-footage-header">
+                                            <Label text="FOOTAGE" styleClass="bintro-footage-header-label"/>
+                                            <Region HBox.hgrow="ALWAYS"/>
+                                            <Label fx:id="footageCountLabel" text="" styleClass="bintro-footage-count"/>
+                                        </HBox>
+                                        <TableView fx:id="clipTable" editable="true"
+                                                   styleClass="bintro-clip-table" VBox.vgrow="ALWAYS">
+                                            <columns>
+                                                <TableColumn fx:id="clipCol" text="Clip" prefWidth="180"/>
+                                                <TableColumn fx:id="exportNameCol" text="Export Name" prefWidth="120"/>
+                                                <TableColumn fx:id="transcriptCol" text="Transcript" prefWidth="240"/>
+                                                <TableColumn fx:id="typeCol" text="Type" prefWidth="80"/>
+                                                <TableColumn fx:id="sceneNumberCol" text="Scene #" prefWidth="80"/>
+                                                <TableColumn fx:id="sceneHeadingCol" text="Scene Heading" prefWidth="220"/>
+                                            </columns>
+                                        </TableView>
+                                    </children>
+                                </VBox>
+                                <TabPane fx:id="rightTabPane" tabClosingPolicy="UNAVAILABLE" styleClass="bintro-tab-pane">
+                                    <tabs>
+                                        <Tab text="Scenes">
+                                            <content>
+                                                <ListView fx:id="sceneList" styleClass="bintro-scene-list"/>
+                                            </content>
+                                        </Tab>
+                                        <Tab text="Script">
+                                            <content>
+                                                <StackPane fx:id="scriptStack">
+                                                    <WebView fx:id="scriptWebView"/>
+                                                </StackPane>
+                                            </content>
+                                        </Tab>
+                                        <Tab fx:id="transcriptTab" text="Transcript">
+                                            <content>
+                                                <TextArea fx:id="transcriptLog" editable="false" wrapText="true"/>
+                                            </content>
+                                        </Tab>
+                                    </tabs>
+                                </TabPane>
+                            </items>
+                        </SplitPane>
                         <StackPane fx:id="videoSlot" minHeight="0"/>
                     </items>
                 </SplitPane>

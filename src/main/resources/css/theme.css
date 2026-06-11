@@ -242,30 +242,49 @@
     -fx-text-fill: #1a1a1a;
 }
 
-/* ───── TitledPane (Light) ─────────────────────────────────── */
-.bintro-titled-pane > .title {
-    -fx-background-color: #f0f0f0;
-    -fx-border-color: #e0e0e0;
-    -fx-border-width: 1 0 1 0;
-    -fx-padding: 5 12 5 12;
-    -fx-cursor: hand;
-}
-.bintro-titled-pane > .title > .text {
-    -fx-font-size: 10px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #888888;
-}
-.bintro-titled-pane > .title > .arrow-button {
+/* ───── Scrollbars (Light) ─────────────────────────────────── */
+/* Thin, minimal, no arrow buttons — app-wide. (Arrows are collapsed
+ * via zero padding/sizes; avoid `-fx-shape: ""`, which the JavaFX 17
+ * CssParser can choke on.) */
+.scroll-bar {
     -fx-background-color: transparent;
+    -fx-padding: 0;
 }
-.bintro-titled-pane > .title > .arrow-button > .arrow {
+.scroll-bar .thumb {
+    -fx-background-color: #c8c8c8;
+    -fx-background-radius: 4px;
+    -fx-background-insets: 2px;
+}
+.scroll-bar .thumb:hover {
     -fx-background-color: #aaaaaa;
 }
-.bintro-titled-pane > .content {
-    -fx-background-color: #fafafa;
-    -fx-border-color: #e0e0e0;
-    -fx-border-width: 0 0 1 0;
+.scroll-bar .thumb:pressed {
+    -fx-background-color: #888888;
 }
+.scroll-bar .track {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+.scroll-bar .track-background {
+    -fx-background-color: transparent;
+}
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-pref-width: 0;
+    -fx-pref-height: 0;
+    -fx-min-width: 0;
+    -fx-min-height: 0;
+}
+.scroll-bar .increment-arrow,
+.scroll-bar .decrement-arrow {
+    -fx-padding: 0;
+    -fx-pref-width: 0;
+    -fx-pref-height: 0;
+}
+.scroll-bar:horizontal { -fx-pref-height: 8px; }
+.scroll-bar:vertical   { -fx-pref-width:  8px; }
 
 
 /* ───── Dark theme ─────────────────────────────────────────── */
@@ -355,18 +374,9 @@
     -fx-text-fill: #e8e8e8;
 }
 
-.theme-dark .bintro-titled-pane > .title {
-    -fx-background-color: #222224;
-    -fx-border-color: #3a3a3c;
-}
-.theme-dark .bintro-titled-pane > .title > .text { -fx-text-fill: #666666; }
-.theme-dark .bintro-titled-pane > .title > .arrow-button > .arrow {
-    -fx-background-color: #666666;
-}
-.theme-dark .bintro-titled-pane > .content {
-    -fx-background-color: #1c1c1e;
-    -fx-border-color: #3a3a3c;
-}
+.theme-dark .scroll-bar .thumb         { -fx-background-color: #484848; }
+.theme-dark .scroll-bar .thumb:hover   { -fx-background-color: #606060; }
+.theme-dark .scroll-bar .thumb:pressed { -fx-background-color: #808080; }
 
 
 /* ───── Navy theme ─────────────────────────────────────────── */
@@ -456,18 +466,9 @@
     -fx-text-fill: #d8e4f4;
 }
 
-.theme-navy .bintro-titled-pane > .title {
-    -fx-background-color: #14223a;
-    -fx-border-color: #253a5a;
-}
-.theme-navy .bintro-titled-pane > .title > .text { -fx-text-fill: #5a7090; }
-.theme-navy .bintro-titled-pane > .title > .arrow-button > .arrow {
-    -fx-background-color: #5a7090;
-}
-.theme-navy .bintro-titled-pane > .content {
-    -fx-background-color: #0f1c30;
-    -fx-border-color: #253a5a;
-}
+.theme-navy .scroll-bar .thumb         { -fx-background-color: #2a4a6a; }
+.theme-navy .scroll-bar .thumb:hover   { -fx-background-color: #3a6090; }
+.theme-navy .scroll-bar .thumb:pressed { -fx-background-color: #4a80b4; }
 
 
 /* ───── Forest theme ───────────────────────────────────────── */
@@ -557,15 +558,6 @@
     -fx-text-fill: #d4e8d8;
 }
 
-.theme-forest .bintro-titled-pane > .title {
-    -fx-background-color: #203026;
-    -fx-border-color: #304838;
-}
-.theme-forest .bintro-titled-pane > .title > .text { -fx-text-fill: #5a7a60; }
-.theme-forest .bintro-titled-pane > .title > .arrow-button > .arrow {
-    -fx-background-color: #5a7a60;
-}
-.theme-forest .bintro-titled-pane > .content {
-    -fx-background-color: #1a2820;
-    -fx-border-color: #304838;
-}
+.theme-forest .scroll-bar .thumb         { -fx-background-color: #2a4a30; }
+.theme-forest .scroll-bar .thumb:hover   { -fx-background-color: #3a6040; }
+.theme-forest .scroll-bar .thumb:pressed { -fx-background-color: #4a8050; }

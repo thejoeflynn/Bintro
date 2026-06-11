@@ -79,7 +79,7 @@ public class PdfPageViewer extends ScrollPane {
     private static final int BAR_COL_GAP = 2;
     private static final double BAR_OPACITY = 0.8;
     /** Pages above/below the visible range to pre-render. */
-    private static final int VIEWPORT_BUFFER_PAGES = 1;
+    private static final int VIEWPORT_BUFFER_PAGES = 2;
 
     private static final Color PLACEHOLDER_BG = Color.web("#f0f0f0");
     private static final Color PLACEHOLDER_LABEL = Color.web("#888888");
@@ -197,7 +197,12 @@ public class PdfPageViewer extends ScrollPane {
             for (int i = 0; i < dims.length; i++) {
                 addPlaceholder(i, dims[i][0], dims[i][1], dims[i][2]);
             }
-            // Defer one more cycle so layout has actually run.
+            // Force a layout pass, then defer the first viewport check one
+            // more cycle so it sees the post-layout viewport bounds. Without
+            // this, hosting inside a SplitPane delivers the initial
+            // viewportBounds change before the document is loaded and the
+            // first visible pages never get queued.
+            requestLayout();
             Platform.runLater(this::checkVisibleAndQueue);
         });
     }
@@ -260,7 +265,8 @@ public class PdfPageViewer extends ScrollPane {
      * haven't been rendered or submitted yet.
      */
     private void checkVisibleAndQueue() {
-        if (pagePlaceholders.isEmpty() || renderer == null) {
+        // openDoc can be nulled by dispose() racing a queued check.
+        if (openDoc == null || renderer == null || pagePlaceholders.isEmpty()) {
             return;
         }
         Set<Integer> visible = visiblePageIndices();

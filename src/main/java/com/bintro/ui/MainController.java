@@ -28,6 +28,8 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.SplitPane;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -35,6 +37,9 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.TransferMode;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.web.WebView;
@@ -98,9 +103,12 @@ public class MainController {
     @FXML private TextArea transcriptLog;
     @FXML private StackPane scriptStack;
     @FXML private WebView scriptWebView;
+    @FXML private BorderPane mainRoot;
     @FXML private VBox centerBox;
     @FXML private SplitPane mainVerticalSplit;
     @FXML private StackPane videoSlot;
+    @FXML private TabPane rightTabPane;
+    @FXML private Tab transcriptTab;
 
     /** Divider position when the video preview opens from collapsed. */
     private static final double VIDEO_DIVIDER_OPEN = 0.65;
@@ -135,6 +143,7 @@ public class MainController {
         setupClipTable();
         wireThemeMenu();
         applyThemeToCurrentScene();
+        setupDragAndDrop();
 
         // Scroll the script viewer to the selected row's scene.
         clipTable.getSelectionModel().selectedItemProperty().addListener((obs, oldVm, newVm) -> {
@@ -306,12 +315,20 @@ public class MainController {
         if (chosen == null) {
             return;
         }
-        footageFolder = chosen;
+        loadFootageFolder(chosen);
+    }
+
+    /**
+     * Sets {@code folder} as the footage source and scans it into the clip
+     * table. Shared by the toolbar button and window drag-and-drop.
+     */
+    private void loadFootageFolder(File folder) {
+        footageFolder = folder;
         statusLabel.setText("Scanning footage…");
         try {
-            clips = new MediaScanner().scanFolder(chosen);
+            clips = new MediaScanner().scanFolder(folder);
             rebuildClipTableFromScan();
-            statusLabel.setText("Loaded " + clips.size() + " clip(s) from " + chosen.getName() + ".");
+            statusLabel.setText("Loaded " + clips.size() + " clip(s) from " + folder.getName() + ".");
         } catch (Exception e) {
             statusLabel.setText("Failed to scan footage: " + e.getMessage());
         }
@@ -333,20 +350,28 @@ public class MainController {
         if (chosen == null) {
             return;
         }
+        loadScriptFile(chosen);
+    }
+
+    /**
+     * Parses {@code file} as the screenplay and primes the scene list and
+     * script viewer. Shared by the toolbar button and window drag-and-drop.
+     */
+    private void loadScriptFile(File file) {
         try {
-            scenes = new ScriptParser().parse(chosen);
-            scriptFile = chosen;
+            scenes = new ScriptParser().parse(file);
+            scriptFile = file;
             sceneList.setItems(FXCollections.observableArrayList(
                 scenes.stream().map(s -> s.sceneNumber() + ". " + cleanHeading(s)).toList()
             ));
             // Pick the right viewer for the file format and prime it with no
             // highlights — clips haven't been matched yet.
-            boolean pdf = chosen.getName().toLowerCase().endsWith(".pdf");
+            boolean pdf = file.getName().toLowerCase().endsWith(".pdf");
             isPdfScript = pdf;
             if (pdf) {
                 showPdfViewer();
-                loadPdfInBackground(chosen);
-                buildPositionIndexInBackground(chosen);
+                loadPdfInBackground(file);
+                buildPositionIndexInBackground(file);
             } else {
                 showWebView();
                 scriptWebView.getEngine().loadContent(
@@ -354,7 +379,7 @@ public class MainController {
             }
             // Rebuild table so new VMs reference the freshly loaded scenes for heading lookup.
             rebuildClipTableFromScan();
-            statusLabel.setText("Loaded " + scenes.size() + " scene(s) from " + chosen.getName() + ".");
+            statusLabel.setText("Loaded " + scenes.size() + " scene(s) from " + file.getName() + ".");
         } catch (Exception e) {
             statusLabel.setText("Failed to parse script: " + e.getMessage());
         }
@@ -363,6 +388,73 @@ public class MainController {
         updateRunEnabled();
         updateWindowTitle();
         updateCountsAndPath();
+    }
+
+    /**
+     * Lets the user drop a footage folder and/or a {@code .pdf}/{@code .fdx}
+     * script onto the window instead of using the toolbar buttons. A single
+     * drop may carry both: the first directory becomes the footage source
+     * and the first script file becomes the screenplay.
+     */
+    private void setupDragAndDrop() {
+        if (mainRoot == null) {
+            return;
+        }
+        mainRoot.setOnDragOver(event -> {
+            Dragboard db = event.getDragboard();
+            if (db.hasFiles()) {
+                boolean acceptable = db.getFiles().stream().anyMatch(f ->
+                    f.isDirectory() || isScriptFile(f));
+                if (acceptable) {
+                    event.acceptTransferModes(TransferMode.COPY);
+                }
+            }
+            event.consume();
+        });
+
+        mainRoot.setOnDragEntered(event -> {
+            if (event.getDragboard().hasFiles()) {
+                mainRoot.setStyle("-fx-border-color: #4a8fd4; -fx-border-width: 2;");
+            }
+            event.consume();
+        });
+
+        mainRoot.setOnDragExited(event -> {
+            mainRoot.setStyle("");
+            event.consume();
+        });
+
+        mainRoot.setOnDragDropped(event -> {
+            mainRoot.setStyle("");
+            Dragboard db = event.getDragboard();
+            boolean success = false;
+            if (db.hasFiles()) {
+                File droppedFolder = null;
+                File droppedScript = null;
+                for (File f : db.getFiles()) {
+                    if (droppedFolder == null && f.isDirectory()) {
+                        droppedFolder = f;
+                    } else if (droppedScript == null && isScriptFile(f)) {
+                        droppedScript = f;
+                    }
+                }
+                if (droppedFolder != null) {
+                    loadFootageFolder(droppedFolder);
+                    success = true;
+                }
+                if (droppedScript != null) {
+                    loadScriptFile(droppedScript);
+                    success = true;
+                }
+            }
+            event.setDropCompleted(success);
+            event.consume();
+        });
+    }
+
+    private static boolean isScriptFile(File f) {
+        String name = f.getName().toLowerCase();
+        return f.isFile() && (name.endsWith(".pdf") || name.endsWith(".fdx"));
     }
 
     /** Resets the clip table to placeholder VMs (no transcript, scene 0) using current state. */
@@ -384,6 +476,11 @@ public class MainController {
         exportButton.setDisable(true);
         progressBar.setProgress(0);
         transcriptLog.clear();
+        // Bring the live transcript into view for the run. One-shot — the
+        // user can switch tabs afterwards without being yanked back.
+        if (rightTabPane != null && transcriptTab != null) {
+            rightTabPane.getSelectionModel().select(transcriptTab);
+        }
         statusLabel.setText("Starting analysis…");
 
         final List<Clip> clipsSnapshot = List.copyOf(clips);
