@@ -27,6 +27,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.SplitPane;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -98,8 +99,13 @@ public class MainController {
     @FXML private StackPane scriptStack;
     @FXML private WebView scriptWebView;
     @FXML private VBox centerBox;
+    @FXML private SplitPane mainVerticalSplit;
+    @FXML private StackPane videoSlot;
 
-    /** In-app video preview, lazily added below the SplitPane in initialize(). */
+    /** Divider position when the video preview opens from collapsed. */
+    private static final double VIDEO_DIVIDER_OPEN = 0.65;
+
+    /** In-app video preview, hosted in the vertical SplitPane's bottom slot. */
     private VideoPlayerPanel videoPlayer;
 
     /** Created lazily when the user first opens a PDF script. */
@@ -138,13 +144,18 @@ public class MainController {
             scrollScriptTo(newVm.sceneNumber());
         });
 
-        // Video preview lives below the SplitPane / Transcript Log. Hidden
-        // until the user picks a row in the clip table.
+        // Video preview lives in the bottom half of the vertical SplitPane.
+        // Collapsed (divider pushed to 1.0) until the user picks a row in
+        // the clip table; while open the user can drag the divider to
+        // resize the preview.
         videoPlayer = new VideoPlayerPanel();
         videoPlayer.setVisible(false);
         videoPlayer.setManaged(false);
-        if (centerBox != null) {
-            centerBox.getChildren().add(videoPlayer);
+        if (videoSlot != null) {
+            videoSlot.getChildren().add(videoPlayer);
+        }
+        if (mainVerticalSplit != null) {
+            mainVerticalSplit.setDividerPosition(0, 1.0);
         }
         clipTable.getSelectionModel().selectedItemProperty().addListener(
             (obs, oldVm, newVm) -> {
@@ -152,10 +163,19 @@ public class MainController {
                     videoPlayer.stop();
                     videoPlayer.setVisible(false);
                     videoPlayer.setManaged(false);
+                    mainVerticalSplit.setDividerPosition(0, 1.0);
+                    mainVerticalSplit.layout();
                     return;
+                }
+                if (oldVm == null) {
+                    // Opening from collapsed — restore the default split.
+                    // Re-selecting while already open keeps whatever divider
+                    // position the user dragged to.
+                    mainVerticalSplit.setDividerPosition(0, VIDEO_DIVIDER_OPEN);
                 }
                 videoPlayer.setVisible(true);
                 videoPlayer.setManaged(true);
+                mainVerticalSplit.layout();
                 videoPlayer.load(newVm.clip());
             });
 

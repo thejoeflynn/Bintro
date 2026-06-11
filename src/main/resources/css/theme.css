@@ -205,6 +205,68 @@
     -fx-text-fill: #ffffff;
 }
 
+/* ───── TabPane (Light) ────────────────────────────────────── */
+/* Underline-style tabs instead of the default rounded chrome.
+ * Hover rules come BEFORE :selected (no `:!selected` in JavaFX CSS). */
+.bintro-tab-pane .tab-header-area {
+    -fx-padding: 0;
+}
+.bintro-tab-pane .tab-header-background {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 0 0 1 0;
+}
+.bintro-tab-pane .tab {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-padding: 6 16 6 16;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+.bintro-tab-pane .tab .tab-label {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #aaaaaa;
+}
+.bintro-tab-pane .tab:hover .tab-label {
+    -fx-text-fill: #555555;
+}
+.bintro-tab-pane .tab:selected {
+    -fx-background-color: #ffffff;
+    -fx-border-color: transparent transparent #1a1a1a transparent;
+    -fx-border-width: 0 0 2 0;
+}
+.bintro-tab-pane .tab:selected .tab-label,
+.bintro-tab-pane .tab:selected:hover .tab-label {
+    -fx-text-fill: #1a1a1a;
+}
+
+/* ───── TitledPane (Light) ─────────────────────────────────── */
+.bintro-titled-pane > .title {
+    -fx-background-color: #f0f0f0;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 1 0 1 0;
+    -fx-padding: 5 12 5 12;
+    -fx-cursor: hand;
+}
+.bintro-titled-pane > .title > .text {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #888888;
+}
+.bintro-titled-pane > .title > .arrow-button {
+    -fx-background-color: transparent;
+}
+.bintro-titled-pane > .title > .arrow-button > .arrow {
+    -fx-background-color: #aaaaaa;
+}
+.bintro-titled-pane > .content {
+    -fx-background-color: #fafafa;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 0 0 1 0;
+}
+
 
 /* ───── Dark theme ─────────────────────────────────────────── */
 .theme-dark { -fx-background-color: #1c1c1e; }
@@ -276,6 +338,34 @@
 .theme-dark .bintro-scene-list .list-cell:selected:hover {
     -fx-background-color: #f0f0f0;
     -fx-text-fill: #111111;
+}
+
+.theme-dark .bintro-tab-pane .tab-header-background {
+    -fx-background-color: #2a2a2c;
+    -fx-border-color: #3a3a3c;
+}
+.theme-dark .bintro-tab-pane .tab .tab-label { -fx-text-fill: #666666; }
+.theme-dark .bintro-tab-pane .tab:hover .tab-label { -fx-text-fill: #aaaaaa; }
+.theme-dark .bintro-tab-pane .tab:selected {
+    -fx-background-color: #2a2a2c;
+    -fx-border-color: transparent transparent #e8e8e8 transparent;
+}
+.theme-dark .bintro-tab-pane .tab:selected .tab-label,
+.theme-dark .bintro-tab-pane .tab:selected:hover .tab-label {
+    -fx-text-fill: #e8e8e8;
+}
+
+.theme-dark .bintro-titled-pane > .title {
+    -fx-background-color: #222224;
+    -fx-border-color: #3a3a3c;
+}
+.theme-dark .bintro-titled-pane > .title > .text { -fx-text-fill: #666666; }
+.theme-dark .bintro-titled-pane > .title > .arrow-button > .arrow {
+    -fx-background-color: #666666;
+}
+.theme-dark .bintro-titled-pane > .content {
+    -fx-background-color: #1c1c1e;
+    -fx-border-color: #3a3a3c;
 }
 
 
@@ -351,6 +441,34 @@
     -fx-text-fill: #ffffff;
 }
 
+.theme-navy .bintro-tab-pane .tab-header-background {
+    -fx-background-color: #162540;
+    -fx-border-color: #253a5a;
+}
+.theme-navy .bintro-tab-pane .tab .tab-label { -fx-text-fill: #5a7090; }
+.theme-navy .bintro-tab-pane .tab:hover .tab-label { -fx-text-fill: #8aa2c4; }
+.theme-navy .bintro-tab-pane .tab:selected {
+    -fx-background-color: #162540;
+    -fx-border-color: transparent transparent #4a8fd4 transparent;
+}
+.theme-navy .bintro-tab-pane .tab:selected .tab-label,
+.theme-navy .bintro-tab-pane .tab:selected:hover .tab-label {
+    -fx-text-fill: #d8e4f4;
+}
+
+.theme-navy .bintro-titled-pane > .title {
+    -fx-background-color: #14223a;
+    -fx-border-color: #253a5a;
+}
+.theme-navy .bintro-titled-pane > .title > .text { -fx-text-fill: #5a7090; }
+.theme-navy .bintro-titled-pane > .title > .arrow-button > .arrow {
+    -fx-background-color: #5a7090;
+}
+.theme-navy .bintro-titled-pane > .content {
+    -fx-background-color: #0f1c30;
+    -fx-border-color: #253a5a;
+}
+
 
 /* ───── Forest theme ───────────────────────────────────────── */
 .theme-forest { -fx-background-color: #1a2820; }
@@ -422,4 +540,32 @@
 .theme-forest .bintro-scene-list .list-cell:selected:hover {
     -fx-background-color: #4ea860;
     -fx-text-fill: #ffffff;
+}
+
+.theme-forest .bintro-tab-pane .tab-header-background {
+    -fx-background-color: #223328;
+    -fx-border-color: #304838;
+}
+.theme-forest .bintro-tab-pane .tab .tab-label { -fx-text-fill: #5a7a60; }
+.theme-forest .bintro-tab-pane .tab:hover .tab-label { -fx-text-fill: #8ab092; }
+.theme-forest .bintro-tab-pane .tab:selected {
+    -fx-background-color: #223328;
+    -fx-border-color: transparent transparent #4ea860 transparent;
+}
+.theme-forest .bintro-tab-pane .tab:selected .tab-label,
+.theme-forest .bintro-tab-pane .tab:selected:hover .tab-label {
+    -fx-text-fill: #d4e8d8;
+}
+
+.theme-forest .bintro-titled-pane > .title {
+    -fx-background-color: #203026;
+    -fx-border-color: #304838;
+}
+.theme-forest .bintro-titled-pane > .title > .text { -fx-text-fill: #5a7a60; }
+.theme-forest .bintro-titled-pane > .title > .arrow-button > .arrow {
+    -fx-background-color: #5a7a60;
+}
+.theme-forest .bintro-titled-pane > .content {
+    -fx-background-color: #1a2820;
+    -fx-border-color: #304838;
 }

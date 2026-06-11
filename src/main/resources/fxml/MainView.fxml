@@ -89,51 +89,65 @@
     <center>
         <VBox fx:id="centerBox">
             <children>
-                <SplitPane dividerPositions="0.55" VBox.vgrow="ALWAYS">
+                <!-- Vertical split: workspace on top, resizable video preview
+                     below. The divider is driven from MainController — pushed
+                     to 1.0 (collapsed) when no clip is selected. -->
+                <SplitPane fx:id="mainVerticalSplit" orientation="VERTICAL"
+                           dividerPositions="0.70" VBox.vgrow="ALWAYS">
                     <items>
-                        <VBox spacing="0">
+                        <VBox fx:id="topHalf">
                             <children>
-                                <HBox alignment="CENTER_LEFT" styleClass="bintro-footage-header">
-                                    <Label text="FOOTAGE" styleClass="bintro-footage-header-label"/>
-                                    <Region HBox.hgrow="ALWAYS"/>
-                                    <Label fx:id="footageCountLabel" text="" styleClass="bintro-footage-count"/>
-                                </HBox>
-                                <TableView fx:id="clipTable" editable="true"
-                                           styleClass="bintro-clip-table" VBox.vgrow="ALWAYS">
-                                    <columns>
-                                        <TableColumn fx:id="clipCol" text="Clip" prefWidth="180"/>
-                                        <TableColumn fx:id="exportNameCol" text="Export Name" prefWidth="120"/>
-                                        <TableColumn fx:id="transcriptCol" text="Transcript" prefWidth="240"/>
-                                        <TableColumn fx:id="typeCol" text="Type" prefWidth="80"/>
-                                        <TableColumn fx:id="sceneNumberCol" text="Scene #" prefWidth="80"/>
-                                        <TableColumn fx:id="sceneHeadingCol" text="Scene Heading" prefWidth="220"/>
-                                    </columns>
-                                </TableView>
+                                <SplitPane dividerPositions="0.55" VBox.vgrow="ALWAYS">
+                                    <items>
+                                        <VBox spacing="0">
+                                            <children>
+                                                <HBox alignment="CENTER_LEFT" styleClass="bintro-footage-header">
+                                                    <Label text="FOOTAGE" styleClass="bintro-footage-header-label"/>
+                                                    <Region HBox.hgrow="ALWAYS"/>
+                                                    <Label fx:id="footageCountLabel" text="" styleClass="bintro-footage-count"/>
+                                                </HBox>
+                                                <TableView fx:id="clipTable" editable="true"
+                                                           styleClass="bintro-clip-table" VBox.vgrow="ALWAYS">
+                                                    <columns>
+                                                        <TableColumn fx:id="clipCol" text="Clip" prefWidth="180"/>
+                                                        <TableColumn fx:id="exportNameCol" text="Export Name" prefWidth="120"/>
+                                                        <TableColumn fx:id="transcriptCol" text="Transcript" prefWidth="240"/>
+                                                        <TableColumn fx:id="typeCol" text="Type" prefWidth="80"/>
+                                                        <TableColumn fx:id="sceneNumberCol" text="Scene #" prefWidth="80"/>
+                                                        <TableColumn fx:id="sceneHeadingCol" text="Scene Heading" prefWidth="220"/>
+                                                    </columns>
+                                                </TableView>
+                                            </children>
+                                        </VBox>
+                                        <TabPane tabClosingPolicy="UNAVAILABLE" styleClass="bintro-tab-pane">
+                                            <tabs>
+                                                <Tab text="Scenes">
+                                                    <content>
+                                                        <ListView fx:id="sceneList" styleClass="bintro-scene-list"/>
+                                                    </content>
+                                                </Tab>
+                                                <Tab text="Script">
+                                                    <content>
+                                                        <StackPane fx:id="scriptStack">
+                                                            <WebView fx:id="scriptWebView"/>
+                                                        </StackPane>
+                                                    </content>
+                                                </Tab>
+                                            </tabs>
+                                        </TabPane>
+                                    </items>
+                                </SplitPane>
+                                <TitledPane text="Transcript Log" expanded="false" animated="true"
+                                            styleClass="bintro-titled-pane">
+                                    <content>
+                                        <TextArea fx:id="transcriptLog" editable="false" wrapText="true" prefHeight="120"/>
+                                    </content>
+                                </TitledPane>
                             </children>
                         </VBox>
-                        <TabPane tabClosingPolicy="UNAVAILABLE">
-                            <tabs>
-                                <Tab text="Scenes">
-                                    <content>
-                                        <ListView fx:id="sceneList" styleClass="bintro-scene-list"/>
-                                    </content>
-                                </Tab>
-                                <Tab text="Script">
-                                    <content>
-                                        <StackPane fx:id="scriptStack">
-                                            <WebView fx:id="scriptWebView"/>
-                                        </StackPane>
-                                    </content>
-                                </Tab>
-                            </tabs>
-                        </TabPane>
+                        <StackPane fx:id="videoSlot" minHeight="0"/>
                     </items>
                 </SplitPane>
-                <TitledPane text="Transcript Log" expanded="false" animated="true">
-                    <content>
-                        <TextArea fx:id="transcriptLog" editable="false" wrapText="true" prefHeight="120"/>
-                    </content>
-                </TitledPane>
             </children>
         </VBox>
     </center>

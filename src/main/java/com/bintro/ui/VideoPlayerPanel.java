@@ -33,9 +33,8 @@ import javafx.util.Duration;
  */
 public class VideoPlayerPanel extends VBox {
 
-    private static final double MEDIA_HEIGHT = 220;
-    private static final String PLAY_GLYPH = "▶";
-    private static final String PAUSE_GLYPH = "⏸";
+    private static final String PLAY_GLYPH = "Play";
+    private static final String PAUSE_GLYPH = "Pause";
 
     private final MediaView mediaView = new MediaView();
     private final Slider scrubBar = new Slider();
@@ -51,20 +50,22 @@ public class VideoPlayerPanel extends VBox {
         setStyle("-fx-background-color: #1a1a1a; -fx-padding: 0;");
 
         clipNameLabel.setStyle(
-            "-fx-font-size: 10px; -fx-text-fill: #666666;"
-                + " -fx-padding: 4 10 2 10; -fx-font-family: 'Courier New';");
+            "-fx-font-size: 10px; -fx-text-fill: #888888;"
+                + " -fx-padding: 5 12 4 12;"
+                + " -fx-font-family: 'System';");
 
         // Media area: a black StackPane that hosts the MediaView, plus a
         // hidden fallback label that appears when the format is unsupported.
+        // No fixed height — it grows with the panel so the video scales as
+        // the user drags the surrounding SplitPane divider.
         StackPane mediaContainer = new StackPane(mediaView, fallbackLabel);
         mediaContainer.setStyle("-fx-background-color: #000000;");
-        mediaContainer.setPrefHeight(MEDIA_HEIGHT);
-        mediaContainer.setMaxHeight(MEDIA_HEIGHT);
-        mediaContainer.setMinHeight(MEDIA_HEIGHT);
+        mediaContainer.setMinHeight(120);
+        VBox.setVgrow(mediaContainer, Priority.ALWAYS);
 
         mediaView.setPreserveRatio(true);
         mediaView.fitWidthProperty().bind(mediaContainer.widthProperty());
-        mediaView.setFitHeight(MEDIA_HEIGHT);
+        mediaView.fitHeightProperty().bind(mediaContainer.heightProperty());
 
         fallbackLabel.setStyle(
             "-fx-text-fill: #cccccc; -fx-font-size: 12px;"
@@ -74,18 +75,26 @@ public class VideoPlayerPanel extends VBox {
 
         // Controls row.
         playPauseButton.setStyle(
-            "-fx-background-color: transparent; -fx-text-fill: #ffffff;"
-                + " -fx-font-size: 14px; -fx-cursor: hand; -fx-padding: 0 8 0 8;");
+            "-fx-background-color: #2a2a2a;"
+                + " -fx-text-fill: #e8e8e8;"
+                + " -fx-font-size: 10px;"
+                + " -fx-font-weight: bold;"
+                + " -fx-padding: 4 12 4 12;"
+                + " -fx-background-radius: 4;"
+                + " -fx-cursor: hand;"
+                + " -fx-min-width: 52px;");
         playPauseButton.setOnAction(e -> togglePlayPause());
 
         timecodeLabel.setStyle(
-            "-fx-font-family: 'Courier New'; -fx-font-size: 11px;"
-                + " -fx-text-fill: #aaaaaa; -fx-min-width: 80px;");
+            "-fx-font-family: 'System';"
+                + " -fx-font-size: 11px;"
+                + " -fx-text-fill: #aaaaaa;"
+                + " -fx-min-width: 88px;");
 
         scrubBar.setMin(0);
         scrubBar.setMax(100);
         scrubBar.setValue(0);
-        scrubBar.setStyle("-fx-accent: #ffffff;");
+        scrubBar.setStyle("-fx-accent: #cccccc;");
         // Seek when the user releases the scrub bar after dragging.
         scrubBar.valueChangingProperty().addListener((obs, wasChanging, isChanging) -> {
             if (!isChanging && player != null) {
@@ -100,15 +109,15 @@ public class VideoPlayerPanel extends VBox {
         volumeSlider.setMax(100);
         volumeSlider.setValue(80);
         volumeSlider.setPrefWidth(80);
-        volumeSlider.setStyle("-fx-accent: #ffffff;");
+        volumeSlider.setStyle("-fx-accent: #cccccc;");
 
-        Label volumeIcon = new Label("🔊"); // 🔊
-        volumeIcon.setStyle("-fx-text-fill: #aaaaaa; -fx-font-size: 12px;");
+        Label volumeIcon = new Label("Vol");
+        volumeIcon.setStyle("-fx-text-fill: #777777; -fx-font-size: 10px;");
 
-        HBox controls = new HBox(8, playPauseButton, timecodeLabel, scrubBar,
+        HBox controls = new HBox(10, playPauseButton, timecodeLabel, scrubBar,
             volumeIcon, volumeSlider);
         controls.setAlignment(Pos.CENTER_LEFT);
-        controls.setStyle("-fx-background-color: #111111; -fx-padding: 6 10 6 10;");
+        controls.setStyle("-fx-background-color: #141414; -fx-padding: 6 12 6 12;");
         HBox.setHgrow(scrubBar, Priority.ALWAYS);
 
         getChildren().addAll(clipNameLabel, mediaContainer, controls);
